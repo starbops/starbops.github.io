@@ -55,15 +55,15 @@
 <div class="section" id="freebsd">
 <h3>FreeBSD</h3>
 <p>Enable the TLS by checking the box in the configure dialog</p>
-<div class="highlight"><pre><span class="c"># portmaster ftp/lftp</span>
+<div class="highlight"><pre>portmaster ftp/lftp
 </pre></div>
 </div>
 <div class="section" id="arch-linux">
 <h3>Arch Linux</h3>
-<div class="highlight"><pre><span class="nv">$ </span>abs
-<span class="nv">$ </span>mkdir ~/abs
-<span class="nv">$ </span>cp -r /var/abs/lftp ~/abs
-<span class="nv">$ </span><span class="nb">cd</span> ~/abs/lftp
+<div class="highlight"><pre>abs
+mkdir ~/abs
+cp -r /var/abs/lftp ~/abs
+<span class="nb">cd</span> ~/abs/lftp
 </pre></div>
 <p>We need to modify the PKGBUILD of lftp</p>
 <div class="highlight"><pre>...
@@ -82,8 +82,8 @@ build() {
 </pre></div>
 <p>Compile our patched source code of lftp. After that, install with the package which we
 built.</p>
-<div class="highlight"><pre><span class="nv">$ </span>makepkg -s<span class="sb">``</span>
-<span class="c"># pacman -U lftp-4.5.5-1-x86_64.pkg.tar.xz``</span>
+<div class="highlight"><pre>makepkg -s<span class="sb">``</span>
+pacman -U lftp-4.5.5-1-x86_64.pkg.tar.xz<span class="sb">``</span>
 </pre></div>
 </div>
 <div class="section" id="mac-os-x">

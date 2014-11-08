@@ -66,7 +66,7 @@
 <p>Notice: libc.so is provided</p>
 <ul>
 <li><dl class="first docutils">
-<dt><tt class="docutils literal">$ objdump <span class="pre">-d</span> libc.so</tt></dt>
+<dt><tt class="docutils literal">objdump <span class="pre">-d</span> libc.so</tt></dt>
 <dd><ul class="first last">
 <li><p class="first">00019970 &lt;__libc_start_main&gt;:</p>
 </li>
@@ -88,7 +88,7 @@ Function: libc_start_main's address is :  0xf75f5970
 Function: libc_system's address is : 0xf75f5970 + 0x262d0 = 0xf761bc40</p>
 <ul>
 <li><dl class="first docutils">
-<dt><tt class="docutils literal">$ objdump <span class="pre">-R</span> foo_5</tt></dt>
+<dt><tt class="docutils literal">objdump <span class="pre">-R</span> foo_5</tt></dt>
 <dd><ul class="first last simple">
 <li>0804a01c R_386_JUMP_SLOT   __libc_start_main</li>
 </ul>

@@ -105,7 +105,7 @@ on to the next character. Repeat this action, the flag will show up</p>
 <p>The hint told me that I should connect to the webpage with Hong Kong IP. To
 satisfy this restriction and to use python script doing this boring job for me,
 Tor must be setup.</p>
-<p>First we need to install Tor via Homebrew <tt class="docutils literal">$ brew install tor</tt>. After the
+<p>First we need to install Tor via Homebrew <tt class="docutils literal">brew install tor</tt>. After the
 installation was done, you will see the caveats shown on the terminal</p>
 <div class="highlight"><pre>To have launchd start tor at login:
     ln -sfv /usr/local/opt/tor/<span class="se">\*</span>.plist ~/Library/LaunchAgents
@@ -125,9 +125,9 @@ ExitNodes {hk}
 <h3>Environment</h3>
 <p>I use Python 2.7.8 to write the script, and import some modules for automatic
 login and using SOCKS proxy</p>
-<div class="highlight"><pre><span class="nv">$ </span>pyenv virtualenv 2.7.8 secprog-2.7.8
-<span class="nv">$ </span>pyenv <span class="nb">local </span>secprog-2.7.8
-<span class="nv">$ </span>pip install mechanize PySocks
+<div class="highlight"><pre>pyenv virtualenv 2.7.8 secprog-2.7.8
+pyenv <span class="nb">local </span>secprog-2.7.8
+pip install mechanize PySocks
 </pre></div>
 </div>
 <div class="section" id="key-points">

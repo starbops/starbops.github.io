@@ -55,12 +55,12 @@
 <div class="section" id="installation">
 <h2>Installation</h2>
 <p>Install vsftpd via pacman</p>
-<div class="highlight"><pre><span class="c"># pacman -S vsftpd</span>
+<div class="highlight"><pre>pacman -S vsftpd
 </pre></div>
 <p>Generate an SSL cert</p>
-<div class="highlight"><pre><span class="c"># cd /etc/ssl/certs</span>
-<span class="c"># openssl req -x509 -nodes -days 7300 -newkey rsakey:2048 -keyout /etc/ssl/certs/vsftpd.pem -out /etc/ssl/certs/vsftpd.pem</span>
-<span class="c"># chmod 600 /etc/ssl/certs/vsftpd.pem</span>
+<div class="highlight"><pre><span class="nb">cd</span> /etc/ssl/certs
+openssl req -x509 -nodes -days 7300 -newkey rsakey:2048 -keyout /etc/ssl/certs/vsftpd.pem -out /etc/ssl/certs/vsftpd.pem
+chmod 600 /etc/ssl/certs/vsftpd.pem
 </pre></div>
 <p>Make sure the lines below are presented in the <tt class="docutils literal">/etc/vsftpd.conf</tt> configure file an uncommented</p>
 <div class="highlight"><pre>local_enable=YES
@@ -86,8 +86,8 @@ log_ftp_protocol=YES
 debug_ssl=YES
 </pre></div>
 <p>Fire up vsftpd and make it start at boot time</p>
-<div class="highlight"><pre><span class="c"># systemctl enable vsftpd.service</span>
-<span class="c"># systemctl start vsftpd.service</span>
+<div class="highlight"><pre>systemctl <span class="nb">enable </span>vsftpd.service
+systemctl start vsftpd.service
 </pre></div>
 </div>
 <div class="section" id="trouble-shooting">
@@ -95,8 +95,8 @@ debug_ssl=YES
 <div class="section" id="port-21-occupied-by-system-default-ftpd-service">
 <h3>Port 21 Occupied by System Default ftpd.service</h3>
 <p>In some cases the system provided ftpd.service will be activated. To stop it</p>
-<div class="highlight"><pre><span class="c"># systemctl stop ftpd.service</span>
-<span class="c"># systemctl disable ftpd.service</span>
+<div class="highlight"><pre>systemctl stop ftpd.service
+systemctl disable ftpd.service
 </pre></div>
 </div>
 <div class="section" id="gnutls-error-15-an-unexpected-tls-packet-was-received">
