@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Tormity Writeup // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Mon 06 October 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Tormity Writeup</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/secprog/">secprog</a>
+                                <a class="post-category" href="/tag/ctf/">ctf</a>
+                                <a class="post-category" href="/tag/writeup/">writeup</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="get-flags">
+<h2>Get Flags</h2>
+<p>According to the first hint: &quot;Try to capture as more flags as you can.&quot;, I
+think we should use to Tor to visit the website. But for tests and simlicity,
+I decided to use Chrome extension which called &quot;Hola&quot;. It is a cute tool that
+help you surfing the Internet through VPNs.</p>
+<p>Although &quot;Hola&quot; is convenient, we should use Tor for better anonimity, like
+atdog said.</p>
+</div>
+<div class="section" id="sql-injection-tests">
+<h2>SQL injection Tests</h2>
+<p>According to the second hint, I believe there are vulnerabilities about SQL
+injection in the website. So I tried to append following query strings, assume
+the base url is <tt class="docutils literal"><span class="pre">http://tor.atdog.tw/news/1</span></tt></p>
+<div class="highlight"><pre>&#39;
+`
+UNION SELECT 1
+UNION SELECT 1,2
+UNION SELECT 1,2,3
+...
+</pre></div>
+<p>Failed. We only got &quot;500 Internal Server Error&quot; page all the time. Try another
+method</p>
+<div class="highlight"><pre>AND 1=1
+AND 1=2
+</pre></div>
+<p>Something happened! The first url returned the article but the second did not.
+So I guess I can use this feature to identify something, e.g. flag.</p>
+<p>The second hint told me that there is a flag in the &quot;flags&quot; table and its
+column name is called &quot;flag&quot;. Chances are there could be multiple rows in that
+table. I want to know how many rows are there in the &quot;flags&quot; table</p>
+<div class="highlight"><pre>AND EXISTS(SELECT 1 FROM flags LIMIT 0, 1)
+AND EXISTS(SELECT 1 FROM flags LIMIT 1, 1)
+AND EXISTS(SELECT 1 FROM flags LIMIT 2, 1)
+</pre></div>
+<p>Using the &quot;limit&quot; SQL command to limit the lines of returned row(s). We knew
+there are two rows in the &quot;flags&quot; table from the above tests. But which one is
+the real flag? According to my tests, the actual flag is the second one.</p>
+<p>The meaning of &quot;blind SQL injection&quot; is that we can only get true or false as
+a result at one time. But how can we capture the flag? One of the approaches is
+to narrow down the number of candidates of a single character by asking the
+webpage &quot;larger or smaller&quot; question. After located the exact character, move
+on to the next character. Repeat this action, the flag will show up</p>
+<div class="highlight"><pre>AND EXISTS(SELECT 1 FROM flags WHERE ORD(SUBSTR((SELECT flag FROM flags LIMIT 1,1), 1)) &lt;= 79)
+</pre></div>
+<p>Finally, our sophisticated query string which will be appended to the base url is</p>
+<div class="highlight"><pre>%20and%20exists(select%201%20from%20flags%20where%20ord(substr((select%20flag%20from%20flags%20limit%201,1),%201))%20%3C=%2079)
+</pre></div>
+</div>
+<div class="section" id="using-tor">
+<h2>Using Tor</h2>
+<p>The hint told me that I should connect to the webpage with Hong Kong IP. To
+satisfy this restriction and to use python script doing this boring job for me,
+Tor must be setup.</p>
+<p>First we need to install Tor via Homebrew <tt class="docutils literal">$ brew install tor</tt>. After the
+installation was done, you will see the caveats shown on the terminal</p>
+<div class="highlight"><pre>To have launchd start tor at login:
+    ln -sfv /usr/local/opt/tor/\*.plist ~/Library/LaunchAgents
+Then to load tor now:
+    launchctl load ~/Library/LaunchAgents/homebrew.mxcl.tor.plist
+</pre></div>
+<p>The default Tor configuration file is at <tt class="docutils literal">/usr/local/etc/tor/torrc.sample</tt>.
+We just need to add two lines of configuration in <tt class="docutils literal"><span class="pre">${HOME}/.torrc</span></tt></p>
+<div class="highlight"><pre>StrictNodes 1
+ExitNodes {hk}
+</pre></div>
+<p>Then all of our connections will exit from Hong Kong.</p>
+</div>
+<div class="section" id="writing-python-script">
+<h2>Writing Python Script</h2>
+<div class="section" id="environment">
+<h3>Environment</h3>
+<p>I use Python 2.7.8 to write the script, and import some modules for automatic
+login and using SOCKS proxy</p>
+<div class="highlight"><pre>$ pyenv virtualenv 2.7.8 secprog-2.7.8
+$ pyenv local secprog-2.7.8
+$ pip install mechanize PySocks
+</pre></div>
+</div>
+<div class="section" id="key-points">
+<h3>Key Points</h3>
+<ul class="simple">
+<li>Using python mechanize library to implement login action</li>
+<li>Using python PySocks library to make all connections go through Tor network
+(SOCKS proxy)</li>
+</ul>
+</div>
+</div>
+<div class="section" id="flag">
+<h2>Flag</h2>
+<p>The flag is <tt class="docutils literal">SECPROC{Hey,D0n't_f0rg3t_g0_thr0ugh_an0nymity_n3tw0rk.}</tt></p>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="https://b3rn3d.herokuapp.com/blog/2014/03/05/tor-country-codes">Tor Country Codes - B3RN3D</a></li>
+<li><a class="reference external" href="http://www.infond.fr/2010/06/tutorial-sql-injection-lampsecurity-ctf.html">tutorial SQL injection - LampSecurity CTF 6</a></li>
+<li><a class="reference external" href="http://dev.mysql.com/doc/refman/5.0/en/string-functions.html#function_substr">MySQL - String Functions</a></li>
+<li><a class="reference external" href="http://simplapi.wordpress.com/2012/04/20/pythons-mechanize-login-like-a-user/">Python's mechanize to login like a user</a></li>
+<li><a class="reference external" href="http://stackoverflow.com/questions/14449974/using-tor-as-a-socks5-proxy-with-python-urllib2-or-mechanize">stack overflow - using tor as a SOCKS5 proxy with python urllib2 or mechanize</a></li>
+<li><a class="reference external" href="http://stackoverflow.com/questions/5984633/python-re-sub-group-number-after-number">stack overflow - python re.sub group: number after number</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>

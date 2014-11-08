@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>FreeBSD Remote Installation // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Wed 22 October 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>FreeBSD Remote Installation</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/freebsd/">freebsd</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="before-started">
+<h2>Before Started</h2>
+<div class="section" id="writable-filesystem">
+<h3>Writable Filesystem</h3>
+<div class="highlight"><pre># mkdir /tmp/etc
+# mount_unionfs /tmp/etc /etc
+</pre></div>
+</div>
+<div class="section" id="connectivity">
+<h3>Connectivity</h3>
+<div class="highlight"><pre># ifconfig em0 140.113.102.184 netmask 255.255.255.224
+# route add default 140.113.102.190
+# echo &#39;nameserver 8.8.8.8&#39; &gt; /tmp/etc/resolv.conf
+</pre></div>
+</div>
+<div class="section" id="sshd-on-duty">
+<h3>SSHD on Duty</h3>
+<div class="highlight"><pre># passwd
+# echo &#39;PermitRootLogin yes&#39; &gt;&gt; /etc/ssh/sshd_config
+# service sshd onestart
+</pre></div>
+</div>
+</div>
+<div class="section" id="remote-installation">
+<h2>Remote Installation</h2>
+<div class="highlight"><pre># gpart destroy -F /dev/da0
+# gpart create -s GPT /dev/da0
+# gpart add -s 128 -t freebsd-boot -l gptboot /dev/da0
+# gpart add -s 1G -t freebsd-swap -l gptswap /dev/da0
+# gpart add -t freebsd-ufs -l gptroot /dev/da0
+# gpart bootcode -b /boot/pmbr -p /boot/gptboot -i 1 /dev/da0
+# swapon /dev/gpt/gptswap
+# newfs -U /dev/gpt/gptroot
+# mount /dev/gpt/gptroot /mnt
+
+# tar Jxf /usr/freebsd-dist/base.txz   -C /mnt
+# tar Jxf /usr/freebsd-dist/kernel.txz -C /mnt
+# tar Jxf /usr/freebsd-dist/doc.txz    -C /mnt
+# tar Jxf /usr/freebsd-dist/src.txz    -C /mnt
+# tar Jxf /usr/freebsd-dist/lib32.txz  -C /mnt
+
+# chroot /mnt
+</pre></div>
+<div class="highlight"><pre># passwd
+# echo &#39;nameserver 8.8.8.8&#39; &gt; /etc/resolv.conf
+# mkdir -p /compat/linux/proc
+# ln -s /usr/share/zoneinfo/Asia/Taipei /etc/localtime
+</pre></div>
+<p>Edit <tt class="docutils literal">/etc/rc.conf</tt></p>
+<div class="highlight"><pre>hostname=&quot;chcbsd.zespre.com&quot;
+ifconfig_em0=&quot;inet 140.113.102.184 netmask 255.255.255.224&quot;
+defaultrouter=&quot;140.113.102.190&quot;
+
+dumpdev=&quot;NO&quot;
+background_fsck=&quot;NO&quot;
+fsck_y_enable=&quot;YES&quot;
+
+sshd_enable=&quot;YES&quot;
+sendmail_enable=&quot;NO&quot;
+ntpd_enable=&quot;YES&quot;
+ntpd_sync_on_start=&quot;YES&quot;
+#pf_enable=&quot;YES&quot;
+#pflog_enable=&quot;YES&quot;
+</pre></div>
+<p>Edit <tt class="docutils literal">/etc/fstab</tt></p>
+<div class="highlight"><pre># Device            Mountpoint          FStype      Options Dump    Pass#
+/dev/gpt/gptswap    none                swap        sw      0       0
+/dev/gpt/gptroot    /                   ufs         rw      1       1
+linproc             /compat/linux/proc  linprocfs   rw,late 0       0
+fdesc               /dev/fd             fdescfs     rw      0       0
+proc                /proc               procfs      rw      0       0
+</pre></div>
+<p>Remove install media then reboot.</p>
+</div>
+<div class="section" id="after-installation">
+<h2>After Installation</h2>
+<p>You need to console login using root if you did not create normal user before
+you reboot the machine</p>
+<div class="highlight"><pre># pw useradd starbops -G wheel -m -s /bin/sh
+</pre></div>
+<p>Download ports tree if you want to install software through ports</p>
+<div class="highlight"><pre># portsnap fetch extract
+</pre></div>
+</div>
+<div class="section" id="conclusion">
+<h2>Conclusion</h2>
+<p>From now on you have a basic FreeBSD server. You can do anything you want. But
+be careful, this is a very basic installation guide. My point is to do the
+installation remotely, so many settings are very rough.</p>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>RB750GL Setup // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Thu 25 September 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>RB750GL Setup</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/routeros/">routeros</a>
+                                <a class="post-category" href="/tag/ntp/">ntp</a>
+                                <a class="post-category" href="/tag/dhcp/">dhcp</a>
+                                <a class="post-category" href="/tag/firewall/">firewall</a>
+                                <a class="post-category" href="/tag/nat/">nat</a>
+                                <a class="post-category" href="/tag/vpn/">vpn</a>
+                        </p>
+                </header>
+            </section>
+            <p>I want to make an environment for developing and testing. And that environment totally belongs to me.</p>
+<div class="section" id="scenario">
+<h2>Scenario</h2>
+<ul>
+<li><dl class="first docutils">
+<dt>RouterBOARD RB750GL</dt>
+<dd><ul class="first last simple">
+<li>MikroTik RouterOS 5.25</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>PC</dt>
+<dd><ul class="first last simple">
+<li>XenServer 6.2</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<div class="highlight"><pre> mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
+E                                                       3
+E                        Internet                       3
+E                                                       3
+ wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+    |
+    |
+    |
+    |
+    |                                    +----+   +----+
+    | 10.113.215.193/24                  | VM |...| VM |
++---+----------+                        ++----+---+----++
+|   1          |  (DHCP, NAT)           |               |
+| (Gateway)   2+------------------------+               |
+|             3| 192.168.88.1/24        |      PC       |
+|             4|                        |   XenServer   |
+|  RB750GL    5|                        |               |
+|              |                        |               |
++--------------+                        +---------------+
+                                        192.168.88.154/24
+</pre></div>
+</div>
+<div class="section" id="connect-with-internet">
+<h2>Connect with Internet</h2>
+<p>Configure IP address, gateway and DNS server</p>
+<div class="highlight"><pre>/ip address add address=10.113.215.193/24 interface=ether1-gateway
+/ip route add dst-address=0.0.0.0/0 gateway=ether1-gateway
+/ip dns set servers=10.113.235.1,8.8.8.8
+</pre></div>
+<p>To test connectivity, try to do this</p>
+<div class="highlight"><pre>/tool flood-ping 8.8.8.8
+</pre></div>
+</div>
+<div class="section" id="ntp-network-time-protocol">
+<h2>NTP (Network Time Protocol)</h2>
+<p>Synchronize time with 3.asia.pool.ntp.org using NTP</p>
+<div class="highlight"><pre>/system ntp client set enabled=yes mode=unicast primary-ntp=77.235.14.49 secondary-ntp=212.26.18.43
+</pre></div>
+<p>To verify that NTP client is running</p>
+<div class="highlight"><pre>/system ntp client print
+</pre></div>
+</div>
+<div class="section" id="upgrade-routeros">
+<h2>Upgrade RouterOS</h2>
+<p>Check what version RB750GL is running currently</p>
+<div class="highlight"><pre>/system package update print
+</pre></div>
+<p>Update RouterOS from 5.25 to 5.26</p>
+<div class="highlight"><pre>/system package update check-for-updates
+/system package update download
+</pre></div>
+<p>By issuing <tt class="docutils literal">/system package update print</tt> you'll see the percentage of download progress. When it is done, upgrade the OS</p>
+<div class="highlight"><pre>/system package update upgrade
+</pre></div>
+<p>RB750GL will auto reboot immediately. When it is ready, ssh into it you'll see</p>
+<div class="highlight"><pre>MMM      MMM       KKK                          TTTTTTTTTTT      KKK
+MMMM    MMMM       KKK                          TTTTTTTTTTT      KKK
+MMM MMMM MMM  III  KKK  KKK  RRRRRR     OOOOOO      TTT     III  KKK  KKK
+MMM  MM  MMM  III  KKKKK     RRR  RRR  OOO  OOO     TTT     III  KKKKK
+MMM      MMM  III  KKK KKK   RRRRRR    OOO  OOO     TTT     III  KKK KKK
+MMM      MMM  III  KKK  KKK  RRR  RRR   OOOOOO      TTT     III  KKK  KKK
+
+MikroTik RouterOS 5.26 (c) 1999-2013       http://www.mikrotik.com/
+</pre></div>
+<p>The upgrading procedure was done successfully.</p>
+</div>
+<div class="section" id="dhcp-dynamic-host-configuration-protocol-server">
+<h2>DHCP (Dynamic Host Configuration Protocol) Server</h2>
+<p>Giving XenServer a static IP</p>
+<div class="highlight"><pre>/ip dhcp-server lease add address=192.168.88.154 mac-address=f4:6d:04:79:80:ff
+</pre></div>
+</div>
+<div class="section" id="firewall">
+<h2>Firewall</h2>
+<p>There were bunch of rules set already. If there were not, you can try these</p>
+<div class="highlight"><pre>/ip firewall filter add action=accept chain=input comment=&quot;default configuration&quot; disabled=no protocol=icmp
+/ip firewall filter add action=accept chain=input comment=&quot;default configuration&quot; connection-state=established disabled=no
+/ip firewall filter add action=accept chain=input comment=&quot;default configuration&quot; connection-state=related disabled=no
+/ip firewall filter add action=drop chain=input comment=&quot;default configuration&quot; disabled=no in-interface=ether1-gateway
+/ip firewall filter add action=accept chain=forward comment=&quot;default configuration&quot; connection-state=established disabled=no
+/ip firewall filter add action=accept chain=forward comment=&quot;default configuration&quot; connection-state=related disabled=no
+/ip firewall filter add action=drop chain=forward comment=&quot;default configuration&quot; connection-state=invalid disabled=no
+</pre></div>
+<p>Reminder: <strong>Firewall rules are traversed in order.</strong></p>
+</div>
+<div class="section" id="nat-network-address-translation">
+<h2>NAT (Network Address Translation)</h2>
+<p>To allow VMs inside LAN have full access to the Internet, one thing to do is
+masquerade packets send to the outer network</p>
+<div class="highlight"><pre>/ip firewall nat add action=masquerade chain=srcnat comment=&quot;default configuration&quot; disabled=no out-interface=ether1-gateway
+</pre></div>
+<p>If you want remote client to access internal services, e.g. SSH, HTTP, RDP, etc.,
+destination NAT is needed</p>
+<div class="highlight"><pre>/ip firewall nat add action=dst-nat chain=dstnat disabled=no dst-port=2222 in-interface=ether1-gateway protocol=tcp to-addresses=192.168.88.155 to-ports=22
+</pre></div>
+</div>
+<div class="section" id="vpn-virtual-private-network-server">
+<h2>VPN (Virtual Private Network) Server</h2>
+<p>Setting up PPTP (Point-to-Point Tunneling Protocol) server. First, we need to
+allocate a IP pool for VPN clients</p>
+<div class="highlight"><pre>/ip pool add name=pptp_pool1 range=192.168.88.5-192.168.88.9
+
+/ppp profile add name=pptp_profile local-address=192.168.88.1 remote-address=pptp_pool1
+/ppp secret add name=doreremimi password=51402991 service=pptp profile=pptp_profile
+/interface pptp-server server set enable=yes
+</pre></div>
+<p>After the setting was done, the connection of VPN should be allowed through the
+firewall</p>
+<div class="highlight"><pre>/ip firewall filter add chain=input in-interface=ether1-gateway protocol=tcp dst-port=1723 action=accept
+</pre></div>
+<p>The connection states could be checked throuth this command</p>
+<div class="highlight"><pre>/interface pptp-server monitor
+</pre></div>
+<p>Now, VPN clients can only ping RB750GL's LAN IP. If you want to communicate
+with other PCs or servers in the LAN, one thing you have to do is enabling
+proxy ARP on the local port</p>
+<div class="highlight"><pre>/interface ethernet set ether2-master-local arp=proxy-arp
+</pre></div>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="http://wiki.mikrotik.com/wiki/Main_Page">MikroTik Wiki</a></li>
+<li><a class="reference external" href="http://www.mobile01.com/topicdetail.php?f=110&amp;t=3205444">基地台與分享器 - [研究所] MikroTik RouterOS 學習 (持續更新) - 電腦討論區 - Mobile01</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>

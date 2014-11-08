@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Network Programming // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Thu 02 October 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Network Programming</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/np/">np</a>
+                                <a class="post-category" href="/tag/exec/">exec</a>
+                                <a class="post-category" href="/tag/pid-table/">pid-table</a>
+                                <a class="post-category" href="/tag/buffer/">buffer</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="exec">
+<h2>exec()</h2>
+<ul class="simple">
+<li><tt class="docutils literal">exec()</tt> does not create new PID, only <tt class="docutils literal">fork()</tt> spawn new PID</li>
+<li>loader</li>
+<li>does not change FD table</li>
+<li>ex: <tt class="docutils literal"><span class="pre">execl(&quot;ls&quot;,</span> &quot;ls&quot;, <span class="pre">&quot;-la&quot;,</span> &quot;d1&quot;)</tt></li>
+</ul>
+</div>
+<div class="section" id="exit">
+<h2>exit()</h2>
+<ul class="simple">
+<li><tt class="docutils literal">exit()</tt> has an argument that means error code, to parent</li>
+<li>flush the buffer before exit</li>
+</ul>
+</div>
+<div class="section" id="wait">
+<h2>wait()</h2>
+<ul class="simple">
+<li>parent process use <tt class="docutils literal">wait(child_pid)</tt> to wait for child process ends</li>
+<li>exit status is read via <tt class="docutils literal">wait()</tt> system call</li>
+</ul>
+</div>
+<div class="section" id="pid-table">
+<h2>PID Table</h2>
+<ul>
+<li><p class="first">PID table: round-robin</p>
+</li>
+<li><p class="first">1 -&gt; 2 -&gt; ... -&gt; 65535 -&gt; 1 (if available)</p>
+</li>
+<li><dl class="first docutils">
+<dt>process fork flow:</dt>
+<dd><ul class="first last simple">
+<li>parent <tt class="docutils literal">fork()</tt> child, child <tt class="docutils literal">exec()</tt> to load some other program</li>
+<li>parent <tt class="docutils literal">wait()</tt> while child <tt class="docutils literal">exit()</tt>, then read the exit status of
+child.</li>
+<li>the child's pid in PID table will be freed</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">zombie process: parent does not <tt class="docutils literal">wait()</tt> for child, i.e. the exit status
+is not read via parent's <tt class="docutils literal">wait()</tt> system call when child is in terminated
+state but still has an entry in process table.</p>
+</li>
+<li><p class="first">orphan process: child's parent process has finished or terminated, but it
+remains running itself.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="file-locking">
+<h2>File Locking</h2>
+<ul class="simple">
+<li>Context-switch's atomic unit is assembly instruction</li>
+<li>The <tt class="docutils literal">FILE</tt> structure has a buffer</li>
+</ul>
+</div>
+<div class="section" id="buffering-for-printf">
+<h2>Buffering for printf</h2>
+<p>Consider the following C code</p>
+<div class="highlight"><pre>#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;unistd.h&gt;
+
+void err_sys(const char* x)
+{
+    perror(x);
+    exit(1);
+}
+
+int main(void) {
+    int pipefd[2], n;
+    char buff[100];
+
+    if(pipe(pipefd) &lt; 0)
+        err_sys(&quot;pipe error&quot;);
+
+    printf(&quot;read fd = %d, write fd = %d\n&quot;, pipefd[0], pipefd[1]);
+    if(write(pipefd[1], &quot;hello world\n&quot;, 12) != 12)
+        err_sys(&quot;write error&quot;);
+
+    if((n = read(pipefd[0], buff, sizeof(buff))) &lt;=0)
+        err_sys(&quot;read error&quot;);
+
+    write(1, buff, n);
+
+    exit(0);
+}
+</pre></div>
+<p>The output will be (assume you redirect the output into a file)</p>
+<div class="highlight"><pre>hello world
+read fd = 3, write fd = 4
+</pre></div>
+<p>The output's order was odd, but there are reasons. The main concept is
+&quot;buffering&quot;. <tt class="docutils literal">printf()</tt> will buffer the strings you want to print. It does
+not sent the strings to the device, say <tt class="docutils literal">stdout</tt>, immediately. Because
+<tt class="docutils literal">printf()</tt> is a library call not a system call. If you use <tt class="docutils literal">write()</tt> system
+call instead, the string &quot;hello worldn&quot; will not be buffered. The string will
+be sent to the device as soon as possible.</p>
+<p>The buffer will be flushed when:</p>
+<ul class="simple">
+<li>The buffer is full</li>
+<li><tt class="docutils literal">flush()</tt> is called (maybe <tt class="docutils literal">fflush()</tt> ?)</li>
+<li><tt class="docutils literal">exit()</tt> is called</li>
+</ul>
+<p>Even though the key concept is buffering, there are still some tiny rules
+affect the facts. For example, when console output is used, output to device
+will be done in no time with the following two cases:</p>
+<ul class="simple">
+<li>Linefeed, i.e. &quot;n&quot;</li>
+<li>The program attempts to read from the terminal (?)</li>
+</ul>
+<p>Reminder: <strong>Do not use ``printf()`` for heavy interaction</strong></p>
+<p><tt class="docutils literal">_Exit()</tt> is more brutal than <tt class="docutils literal">exit()</tt>. If you try to redirect the output
+into a file, the strings stored in the buffer will not be shown. <tt class="docutils literal">_Exit()</tt>
+terminate the process in no time, and it will not sent the strings which are
+still in the buffer to the output.</p>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>

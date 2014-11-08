@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Network Programming // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Thu 16 October 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Network Programming</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/np/">np</a>
+                                <a class="post-category" href="/tag/byte-order/">byte-order</a>
+                                <a class="post-category" href="/tag/buffer/">buffer</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="byte-order">
+<h2>Byte Order</h2>
+<ul class="simple">
+<li>Little endian: int -&gt; short is convenient (still implemented in most PCs)</li>
+<li>Big endian: straight forward, hence become main trend
+(media formats, networking)</li>
+</ul>
+<div class="highlight"><pre>          |   |                 Big endian
+A ------&gt; |   | 0 1               A  A+1 A+2 A+3
+A + 1 --&gt; |   | 0 0             +---+---+---+---+
+A + 2 --&gt; |   | 0 0             | 0 | 0 | 0 | 1 |
+A + 3 --&gt; |   | 1 0             +---+---+---+---+
+          |   |                  A+3 A+2 A+1  A
+                                Little endian
+</pre></div>
+<ul class="simple">
+<li>Circuit switching: telephone system</li>
+<li>Packet switching: IP</li>
+<li>Virtual circuit switching: TCP (each packet may not go through same path)</li>
+</ul>
+</div>
+<div class="section" id="buffer-in-network-programming">
+<h2>Buffer in Network Programming</h2>
+<p>Send/receive buffers are normally in 2 KB, 4 KB, or 8 KB size. We use 4 KB for
+example.</p>
+<ul>
+<li><dl class="first docutils">
+<dt>Define of a successfully <tt class="docutils literal">write()</tt>: write to send buffer, not transmit</dt>
+<dd><ul class="first last simple">
+<li>3 KB full, write 2 KB =&gt; return length of successfully written data, then
+continue</li>
+<li>4 KB full, write 2 KB =&gt; blocked until send buffer is available again</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">Define of a successfully <tt class="docutils literal">read()</tt>: read from receive buffer as long as
+data arrive receive buffer (even buffer is not full)</p>
+</li>
+</ul>
+</div>
+<div class="section" id="socket-programming">
+<h2>Socket Programming</h2>
+<ul class="simple">
+<li><tt class="docutils literal">htons()</tt>: host to network short</li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>

