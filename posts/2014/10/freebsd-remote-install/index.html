@@ -53,49 +53,49 @@
 <h2>Before Started</h2>
 <div class="section" id="writable-filesystem">
 <h3>Writable Filesystem</h3>
-<div class="highlight"><pre># mkdir /tmp/etc
-# mount_unionfs /tmp/etc /etc
+<div class="highlight"><pre><span class="c"># mkdir /tmp/etc</span>
+<span class="c"># mount_unionfs /tmp/etc /etc</span>
 </pre></div>
 </div>
 <div class="section" id="connectivity">
 <h3>Connectivity</h3>
-<div class="highlight"><pre># ifconfig em0 140.113.102.184 netmask 255.255.255.224
-# route add default 140.113.102.190
-# echo &#39;nameserver 8.8.8.8&#39; &gt; /tmp/etc/resolv.conf
+<div class="highlight"><pre><span class="c"># ifconfig em0 140.113.102.184 netmask 255.255.255.224</span>
+<span class="c"># route add default 140.113.102.190</span>
+<span class="c"># echo &#39;nameserver 8.8.8.8&#39; &gt; /tmp/etc/resolv.conf</span>
 </pre></div>
 </div>
 <div class="section" id="sshd-on-duty">
 <h3>SSHD on Duty</h3>
-<div class="highlight"><pre># passwd
-# echo &#39;PermitRootLogin yes&#39; &gt;&gt; /etc/ssh/sshd_config
-# service sshd onestart
+<div class="highlight"><pre><span class="c"># passwd</span>
+<span class="c"># echo &#39;PermitRootLogin yes&#39; &gt;&gt; /etc/ssh/sshd_config</span>
+<span class="c"># service sshd onestart</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="remote-installation">
 <h2>Remote Installation</h2>
-<div class="highlight"><pre># gpart destroy -F /dev/da0
-# gpart create -s GPT /dev/da0
-# gpart add -s 128 -t freebsd-boot -l gptboot /dev/da0
-# gpart add -s 1G -t freebsd-swap -l gptswap /dev/da0
-# gpart add -t freebsd-ufs -l gptroot /dev/da0
-# gpart bootcode -b /boot/pmbr -p /boot/gptboot -i 1 /dev/da0
-# swapon /dev/gpt/gptswap
-# newfs -U /dev/gpt/gptroot
-# mount /dev/gpt/gptroot /mnt
+<div class="highlight"><pre><span class="c"># gpart destroy -F /dev/da0</span>
+<span class="c"># gpart create -s GPT /dev/da0</span>
+<span class="c"># gpart add -s 128 -t freebsd-boot -l gptboot /dev/da0</span>
+<span class="c"># gpart add -s 1G -t freebsd-swap -l gptswap /dev/da0</span>
+<span class="c"># gpart add -t freebsd-ufs -l gptroot /dev/da0</span>
+<span class="c"># gpart bootcode -b /boot/pmbr -p /boot/gptboot -i 1 /dev/da0</span>
+<span class="c"># swapon /dev/gpt/gptswap</span>
+<span class="c"># newfs -U /dev/gpt/gptroot</span>
+<span class="c"># mount /dev/gpt/gptroot /mnt</span>
 
-# tar Jxf /usr/freebsd-dist/base.txz   -C /mnt
-# tar Jxf /usr/freebsd-dist/kernel.txz -C /mnt
-# tar Jxf /usr/freebsd-dist/doc.txz    -C /mnt
-# tar Jxf /usr/freebsd-dist/src.txz    -C /mnt
-# tar Jxf /usr/freebsd-dist/lib32.txz  -C /mnt
+<span class="c"># tar Jxf /usr/freebsd-dist/base.txz   -C /mnt</span>
+<span class="c"># tar Jxf /usr/freebsd-dist/kernel.txz -C /mnt</span>
+<span class="c"># tar Jxf /usr/freebsd-dist/doc.txz    -C /mnt</span>
+<span class="c"># tar Jxf /usr/freebsd-dist/src.txz    -C /mnt</span>
+<span class="c"># tar Jxf /usr/freebsd-dist/lib32.txz  -C /mnt</span>
 
-# chroot /mnt
+<span class="c"># chroot /mnt</span>
 </pre></div>
-<div class="highlight"><pre># passwd
-# echo &#39;nameserver 8.8.8.8&#39; &gt; /etc/resolv.conf
-# mkdir -p /compat/linux/proc
-# ln -s /usr/share/zoneinfo/Asia/Taipei /etc/localtime
+<div class="highlight"><pre><span class="c"># passwd</span>
+<span class="c"># echo &#39;nameserver 8.8.8.8&#39; &gt; /etc/resolv.conf</span>
+<span class="c"># mkdir -p /compat/linux/proc</span>
+<span class="c"># ln -s /usr/share/zoneinfo/Asia/Taipei /etc/localtime</span>
 </pre></div>
 <p>Edit <tt class="docutils literal">/etc/rc.conf</tt></p>
 <div class="highlight"><pre>hostname=&quot;chcbsd.zespre.com&quot;
@@ -127,10 +127,10 @@ proc                /proc               procfs      rw      0       0
 <h2>After Installation</h2>
 <p>You need to console login using root if you did not create normal user before
 you reboot the machine</p>
-<div class="highlight"><pre># pw useradd starbops -G wheel -m -s /bin/sh
+<div class="highlight"><pre><span class="c"># pw useradd starbops -G wheel -m -s /bin/sh</span>
 </pre></div>
 <p>Download ports tree if you want to install software through ports</p>
-<div class="highlight"><pre># portsnap fetch extract
+<div class="highlight"><pre><span class="c"># portsnap fetch extract</span>
 </pre></div>
 </div>
 <div class="section" id="conclusion">

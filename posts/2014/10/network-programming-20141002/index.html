@@ -112,34 +112,34 @@ remains running itself.</p>
 <div class="section" id="buffering-for-printf">
 <h2>Buffering for printf</h2>
 <p>Consider the following C code</p>
-<div class="highlight"><pre>#include &lt;stdio.h&gt;
-#include &lt;stdlib.h&gt;
-#include &lt;unistd.h&gt;
+<div class="highlight"><pre><span class="cp">#include &lt;stdio.h&gt;</span>
+<span class="cp">#include &lt;stdlib.h&gt;</span>
+<span class="cp">#include &lt;unistd.h&gt;</span>
 
-void err_sys(const char* x)
-{
-    perror(x);
-    exit(1);
-}
+<span class="kt">void</span> <span class="nf">err_sys</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span><span class="o">*</span> <span class="n">x</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">perror</span><span class="p">(</span><span class="n">x</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
 
-int main(void) {
-    int pipefd[2], n;
-    char buff[100];
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">pipefd</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">n</span><span class="p">;</span>
+    <span class="kt">char</span> <span class="n">buff</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
 
-    if(pipe(pipefd) &lt; 0)
-        err_sys(&quot;pipe error&quot;);
+    <span class="k">if</span><span class="p">(</span><span class="n">pipe</span><span class="p">(</span><span class="n">pipefd</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">err_sys</span><span class="p">(</span><span class="s">&quot;pipe error&quot;</span><span class="p">);</span>
 
-    printf(&quot;read fd = %d, write fd = %d\n&quot;, pipefd[0], pipefd[1]);
-    if(write(pipefd[1], &quot;hello world\n&quot;, 12) != 12)
-        err_sys(&quot;write error&quot;);
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;read fd = %d, write fd = %d</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">pipefd</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">pipefd</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">write</span><span class="p">(</span><span class="n">pipefd</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="s">&quot;hello world</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">12</span><span class="p">)</span>
+        <span class="n">err_sys</span><span class="p">(</span><span class="s">&quot;write error&quot;</span><span class="p">);</span>
 
-    if((n = read(pipefd[0], buff, sizeof(buff))) &lt;=0)
-        err_sys(&quot;read error&quot;);
+    <span class="k">if</span><span class="p">((</span><span class="n">n</span> <span class="o">=</span> <span class="n">read</span><span class="p">(</span><span class="n">pipefd</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">buff</span><span class="p">,</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">buff</span><span class="p">)))</span> <span class="o">&lt;=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">err_sys</span><span class="p">(</span><span class="s">&quot;read error&quot;</span><span class="p">);</span>
 
-    write(1, buff, n);
+    <span class="n">write</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">buff</span><span class="p">,</span> <span class="n">n</span><span class="p">);</span>
 
-    exit(0);
-}
+    <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
 </pre></div>
 <p>The output will be (assume you redirect the output into a file)</p>
 <div class="highlight"><pre>hello world

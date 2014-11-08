@@ -100,9 +100,9 @@ E                                                       3
 <div class="section" id="connect-with-internet">
 <h2>Connect with Internet</h2>
 <p>Configure IP address, gateway and DNS server</p>
-<div class="highlight"><pre>/ip address add address=10.113.215.193/24 interface=ether1-gateway
-/ip route add dst-address=0.0.0.0/0 gateway=ether1-gateway
-/ip dns set servers=10.113.235.1,8.8.8.8
+<div class="highlight"><pre>/ip address add <span class="nv">address</span><span class="o">=</span>10.113.215.193/24 <span class="nv">interface</span><span class="o">=</span>ether1-gateway
+/ip route add dst-address<span class="o">=</span>0.0.0.0/0 <span class="nv">gateway</span><span class="o">=</span>ether1-gateway
+/ip dns <span class="nb">set </span><span class="nv">servers</span><span class="o">=</span>10.113.235.1,8.8.8.8
 </pre></div>
 <p>To test connectivity, try to do this</p>
 <div class="highlight"><pre>/tool flood-ping 8.8.8.8
@@ -111,7 +111,7 @@ E                                                       3
 <div class="section" id="ntp-network-time-protocol">
 <h2>NTP (Network Time Protocol)</h2>
 <p>Synchronize time with 3.asia.pool.ntp.org using NTP</p>
-<div class="highlight"><pre>/system ntp client set enabled=yes mode=unicast primary-ntp=77.235.14.49 secondary-ntp=212.26.18.43
+<div class="highlight"><pre>/system ntp client <span class="nb">set </span><span class="nv">enabled</span><span class="o">=</span>yes <span class="nv">mode</span><span class="o">=</span>unicast primary-ntp<span class="o">=</span>77.235.14.49 secondary-ntp<span class="o">=</span>212.26.18.43
 </pre></div>
 <p>To verify that NTP client is running</p>
 <div class="highlight"><pre>/system ntp client print
@@ -144,19 +144,19 @@ MikroTik RouterOS 5.26 (c) 1999-2013       http://www.mikrotik.com/
 <div class="section" id="dhcp-dynamic-host-configuration-protocol-server">
 <h2>DHCP (Dynamic Host Configuration Protocol) Server</h2>
 <p>Giving XenServer a static IP</p>
-<div class="highlight"><pre>/ip dhcp-server lease add address=192.168.88.154 mac-address=f4:6d:04:79:80:ff
+<div class="highlight"><pre>/ip dhcp-server lease add <span class="nv">address</span><span class="o">=</span>192.168.88.154 mac-address<span class="o">=</span>f4:6d:04:79:80:ff
 </pre></div>
 </div>
 <div class="section" id="firewall">
 <h2>Firewall</h2>
 <p>There were bunch of rules set already. If there were not, you can try these</p>
-<div class="highlight"><pre>/ip firewall filter add action=accept chain=input comment=&quot;default configuration&quot; disabled=no protocol=icmp
-/ip firewall filter add action=accept chain=input comment=&quot;default configuration&quot; connection-state=established disabled=no
-/ip firewall filter add action=accept chain=input comment=&quot;default configuration&quot; connection-state=related disabled=no
-/ip firewall filter add action=drop chain=input comment=&quot;default configuration&quot; disabled=no in-interface=ether1-gateway
-/ip firewall filter add action=accept chain=forward comment=&quot;default configuration&quot; connection-state=established disabled=no
-/ip firewall filter add action=accept chain=forward comment=&quot;default configuration&quot; connection-state=related disabled=no
-/ip firewall filter add action=drop chain=forward comment=&quot;default configuration&quot; connection-state=invalid disabled=no
+<div class="highlight"><pre>/ip firewall filter add <span class="nv">action</span><span class="o">=</span>accept <span class="nv">chain</span><span class="o">=</span>input <span class="nv">comment</span><span class="o">=</span><span class="s2">&quot;default configuration&quot;</span> <span class="nv">disabled</span><span class="o">=</span>no <span class="nv">protocol</span><span class="o">=</span>icmp
+/ip firewall filter add <span class="nv">action</span><span class="o">=</span>accept <span class="nv">chain</span><span class="o">=</span>input <span class="nv">comment</span><span class="o">=</span><span class="s2">&quot;default configuration&quot;</span> connection-state<span class="o">=</span>established <span class="nv">disabled</span><span class="o">=</span>no
+/ip firewall filter add <span class="nv">action</span><span class="o">=</span>accept <span class="nv">chain</span><span class="o">=</span>input <span class="nv">comment</span><span class="o">=</span><span class="s2">&quot;default configuration&quot;</span> connection-state<span class="o">=</span>related <span class="nv">disabled</span><span class="o">=</span>no
+/ip firewall filter add <span class="nv">action</span><span class="o">=</span>drop <span class="nv">chain</span><span class="o">=</span>input <span class="nv">comment</span><span class="o">=</span><span class="s2">&quot;default configuration&quot;</span> <span class="nv">disabled</span><span class="o">=</span>no in-interface<span class="o">=</span>ether1-gateway
+/ip firewall filter add <span class="nv">action</span><span class="o">=</span>accept <span class="nv">chain</span><span class="o">=</span>forward <span class="nv">comment</span><span class="o">=</span><span class="s2">&quot;default configuration&quot;</span> connection-state<span class="o">=</span>established <span class="nv">disabled</span><span class="o">=</span>no
+/ip firewall filter add <span class="nv">action</span><span class="o">=</span>accept <span class="nv">chain</span><span class="o">=</span>forward <span class="nv">comment</span><span class="o">=</span><span class="s2">&quot;default configuration&quot;</span> connection-state<span class="o">=</span>related <span class="nv">disabled</span><span class="o">=</span>no
+/ip firewall filter add <span class="nv">action</span><span class="o">=</span>drop <span class="nv">chain</span><span class="o">=</span>forward <span class="nv">comment</span><span class="o">=</span><span class="s2">&quot;default configuration&quot;</span> connection-state<span class="o">=</span>invalid <span class="nv">disabled</span><span class="o">=</span>no
 </pre></div>
 <p>Reminder: <strong>Firewall rules are traversed in order.</strong></p>
 </div>
@@ -164,26 +164,26 @@ MikroTik RouterOS 5.26 (c) 1999-2013       http://www.mikrotik.com/
 <h2>NAT (Network Address Translation)</h2>
 <p>To allow VMs inside LAN have full access to the Internet, one thing to do is
 masquerade packets send to the outer network</p>
-<div class="highlight"><pre>/ip firewall nat add action=masquerade chain=srcnat comment=&quot;default configuration&quot; disabled=no out-interface=ether1-gateway
+<div class="highlight"><pre>/ip firewall nat add <span class="nv">action</span><span class="o">=</span>masquerade <span class="nv">chain</span><span class="o">=</span>srcnat <span class="nv">comment</span><span class="o">=</span><span class="s2">&quot;default configuration&quot;</span> <span class="nv">disabled</span><span class="o">=</span>no out-interface<span class="o">=</span>ether1-gateway
 </pre></div>
 <p>If you want remote client to access internal services, e.g. SSH, HTTP, RDP, etc.,
 destination NAT is needed</p>
-<div class="highlight"><pre>/ip firewall nat add action=dst-nat chain=dstnat disabled=no dst-port=2222 in-interface=ether1-gateway protocol=tcp to-addresses=192.168.88.155 to-ports=22
+<div class="highlight"><pre>/ip firewall nat add <span class="nv">action</span><span class="o">=</span>dst-nat <span class="nv">chain</span><span class="o">=</span>dstnat <span class="nv">disabled</span><span class="o">=</span>no dst-port<span class="o">=</span>2222 in-interface<span class="o">=</span>ether1-gateway <span class="nv">protocol</span><span class="o">=</span>tcp to-addresses<span class="o">=</span>192.168.88.155 to-ports<span class="o">=</span>22
 </pre></div>
 </div>
 <div class="section" id="vpn-virtual-private-network-server">
 <h2>VPN (Virtual Private Network) Server</h2>
 <p>Setting up PPTP (Point-to-Point Tunneling Protocol) server. First, we need to
 allocate a IP pool for VPN clients</p>
-<div class="highlight"><pre>/ip pool add name=pptp_pool1 range=192.168.88.5-192.168.88.9
+<div class="highlight"><pre>/ip pool add <span class="nv">name</span><span class="o">=</span>pptp_pool1 <span class="nv">range</span><span class="o">=</span>192.168.88.5-192.168.88.9
 
-/ppp profile add name=pptp_profile local-address=192.168.88.1 remote-address=pptp_pool1
-/ppp secret add name=doreremimi password=51402991 service=pptp profile=pptp_profile
-/interface pptp-server server set enable=yes
+/ppp profile add <span class="nv">name</span><span class="o">=</span>pptp_profile <span class="nb">local</span>-address<span class="o">=</span>192.168.88.1 remote-address<span class="o">=</span>pptp_pool1
+/ppp secret add <span class="nv">name</span><span class="o">=</span>doreremimi <span class="nv">password</span><span class="o">=</span>51402991 <span class="nv">service</span><span class="o">=</span>pptp <span class="nv">profile</span><span class="o">=</span>pptp_profile
+/interface pptp-server server <span class="nb">set enable</span><span class="o">=</span>yes
 </pre></div>
 <p>After the setting was done, the connection of VPN should be allowed through the
 firewall</p>
-<div class="highlight"><pre>/ip firewall filter add chain=input in-interface=ether1-gateway protocol=tcp dst-port=1723 action=accept
+<div class="highlight"><pre>/ip firewall filter add <span class="nv">chain</span><span class="o">=</span>input in-interface<span class="o">=</span>ether1-gateway <span class="nv">protocol</span><span class="o">=</span>tcp dst-port<span class="o">=</span>1723 <span class="nv">action</span><span class="o">=</span>accept
 </pre></div>
 <p>The connection states could be checked throuth this command</p>
 <div class="highlight"><pre>/interface pptp-server monitor
@@ -191,7 +191,7 @@ firewall</p>
 <p>Now, VPN clients can only ping RB750GL's LAN IP. If you want to communicate
 with other PCs or servers in the LAN, one thing you have to do is enabling
 proxy ARP on the local port</p>
-<div class="highlight"><pre>/interface ethernet set ether2-master-local arp=proxy-arp
+<div class="highlight"><pre>/interface ethernet <span class="nb">set </span>ether2-master-local <span class="nv">arp</span><span class="o">=</span>proxy-arp
 </pre></div>
 </div>
 <div class="section" id="references">

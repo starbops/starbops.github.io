@@ -75,19 +75,19 @@ powerful decompilation technology, I believe things will go better.</p>
 <p>Unfortunately, the key subroutine cannot be decompile. Because there is a weird
 <tt class="docutils literal">je</tt> at 0x08048AA5. It made IDA Pro unable to decompile that piece of code (I
 copied the code generate from objdump and paste it below, not from IDA Pro)</p>
-<div class="highlight"><pre>8048a9a:       c7 45 ec 01 00 00 00    mov    DWORD PTR [ebp-0x14],0x1
-8048aa1:       83 7d ec 00             cmp    DWORD PTR [ebp-0x14],0x0
-8048aa5:       74 10                   je     8048ab7 &lt;fputs@plt+0x3e7&gt;
-8048aa7:       b8 3c 00 00 00          mov    eax,0x3c
-8048aac:       01 c4                   add    esp,eax
+<div class="highlight"><pre><span class="err">8048</span><span class="nl">a9a:</span>       <span class="nf">c7</span> <span class="mi">45</span> <span class="nv">ec</span> <span class="mi">01</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span>    <span class="nv">mov</span>    <span class="kt">DWORD</span> <span class="nv">PTR</span> <span class="p">[</span><span class="nb">ebp</span><span class="o">-</span><span class="mh">0x14</span><span class="p">],</span><span class="mh">0x1</span>
+<span class="err">8048</span><span class="nl">aa1:</span>       <span class="err">83</span> <span class="err">7</span><span class="nf">d</span> <span class="nv">ec</span> <span class="mi">00</span>             <span class="nv">cmp</span>    <span class="kt">DWORD</span> <span class="nv">PTR</span> <span class="p">[</span><span class="nb">ebp</span><span class="o">-</span><span class="mh">0x14</span><span class="p">],</span><span class="mh">0x0</span>
+<span class="err">8048</span><span class="nl">aa5:</span>       <span class="err">74</span> <span class="err">10</span>                   <span class="nf">je</span>     <span class="mi">8048</span><span class="nv">ab7</span> <span class="o">&lt;</span><span class="nv">fputs@plt</span><span class="o">+</span><span class="mh">0x3e7</span><span class="o">&gt;</span>
+<span class="err">8048</span><span class="nl">aa7:</span>       <span class="nf">b8</span> <span class="mi">3</span><span class="nv">c</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span>          <span class="nv">mov</span>    <span class="nb">eax</span><span class="p">,</span><span class="mh">0x3c</span>
+<span class="err">8048</span><span class="nl">aac:</span>       <span class="err">01</span> <span class="nf">c4</span>                   <span class="nv">add</span>    <span class="nb">esp</span><span class="p">,</span><span class="nb">eax</span>
 </pre></div>
 <p>So I patch the code by stuffing <tt class="docutils literal">nop</tt> to replace <tt class="docutils literal">je 8048ab7</tt></p>
-<div class="highlight"><pre>8048a9a:       c7 45 ec 01 00 00 00    mov    DWORD PTR [ebp-0x14],0x1
-8048aa1:       83 7d ec 00             cmp    DWORD PTR [ebp-0x14],0x0
-8048aa5:       90                      nop
-8048aa6:       90                      nop
-8048aa7:       b8 3c 00 00 00          mov    eax,0x3c
-8048aac:       01 c4                   add    esp,eax
+<div class="highlight"><pre><span class="err">8048</span><span class="nl">a9a:</span>       <span class="nf">c7</span> <span class="mi">45</span> <span class="nv">ec</span> <span class="mi">01</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span>    <span class="nv">mov</span>    <span class="kt">DWORD</span> <span class="nv">PTR</span> <span class="p">[</span><span class="nb">ebp</span><span class="o">-</span><span class="mh">0x14</span><span class="p">],</span><span class="mh">0x1</span>
+<span class="err">8048</span><span class="nl">aa1:</span>       <span class="err">83</span> <span class="err">7</span><span class="nf">d</span> <span class="nv">ec</span> <span class="mi">00</span>             <span class="nv">cmp</span>    <span class="kt">DWORD</span> <span class="nv">PTR</span> <span class="p">[</span><span class="nb">ebp</span><span class="o">-</span><span class="mh">0x14</span><span class="p">],</span><span class="mh">0x0</span>
+<span class="err">8048</span><span class="nl">aa5:</span>       <span class="err">90</span>                      <span class="nf">nop</span>
+<span class="err">8048</span><span class="nl">aa6:</span>       <span class="err">90</span>                      <span class="nf">nop</span>
+<span class="err">8048</span><span class="nl">aa7:</span>       <span class="nf">b8</span> <span class="mi">3</span><span class="nv">c</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span>          <span class="nv">mov</span>    <span class="nb">eax</span><span class="p">,</span><span class="mh">0x3c</span>
+<span class="err">8048</span><span class="nl">aac:</span>       <span class="err">01</span> <span class="nf">c4</span>                   <span class="nv">add</span>    <span class="nb">esp</span><span class="p">,</span><span class="nb">eax</span>
 </pre></div>
 <p>At this time, we can create function and press the impressive F5 button:)</p>
 </div>
@@ -96,24 +96,24 @@ copied the code generate from objdump and paste it below, not from IDA Pro)</p>
 <p>By tracing the pseudo code, we know that there are two key points in this
 executable. They are all about how the password user typed is XORed. One of
 them is in sub_8048C1C()</p>
-<div class="highlight"><pre>......
-seed = time(0)
-srand(seed);
-......
-result = 65535 * seed + 31337;
-......
+<div class="highlight"><pre><span class="p">......</span>
+<span class="n">seed</span> <span class="o">=</span> <span class="n">time</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">srand</span><span class="p">(</span><span class="n">seed</span><span class="p">);</span>
+<span class="p">......</span>
+<span class="n">result</span> <span class="o">=</span> <span class="mi">65535</span> <span class="o">*</span> <span class="n">seed</span> <span class="o">+</span> <span class="mi">31337</span><span class="p">;</span>
+<span class="p">......</span>
 </pre></div>
 <p>The other is in sub_80488FD()</p>
-<div class="highlight"><pre>......
-fgets(s, 32, stdin);
-v3 = strlen(s));
-s[v3 - 1] = 0;
-for ( i = 0; (signed int)(v3 - 1) &gt; i; i += 4)
-{
-    s[i] ^= dword_804A548;
-    s[i + 2] ^= (signed int)seed / 65535;
-}
-......
+<div class="highlight"><pre><span class="p">......</span>
+<span class="n">fgets</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="n">stdin</span><span class="p">);</span>
+<span class="n">v3</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="n">s</span><span class="p">));</span>
+<span class="n">s</span><span class="p">[</span><span class="n">v3</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="k">for</span> <span class="p">(</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="p">(</span><span class="kt">signed</span> <span class="kt">int</span><span class="p">)(</span><span class="n">v3</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">i</span><span class="p">;</span> <span class="n">i</span> <span class="o">+=</span> <span class="mi">4</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">^=</span> <span class="n">dword_804A548</span><span class="p">;</span>
+    <span class="n">s</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">^=</span> <span class="p">(</span><span class="kt">signed</span> <span class="kt">int</span><span class="p">)</span><span class="n">seed</span> <span class="o">/</span> <span class="mi">65535</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="p">......</span>
 </pre></div>
 <p>From the above pseudo code, we know that the password
 &quot;DoYouThinkThisIsPassword&quot; is being XORed with following style:</p>

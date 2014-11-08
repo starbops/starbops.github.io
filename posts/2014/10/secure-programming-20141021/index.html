@@ -54,14 +54,14 @@
             </section>
             <div class="section" id="gnu-debugger-skill">
 <h2>GNU Debugger Skill</h2>
-<div class="highlight"><pre>(gdb) disassemble foo
-(gdb) b *foo+40
-(gdb) r
-(gdb) display/i $pc
-(gdb) x/10xw $ebp+0x10
-(gdb) x/20xw $esp-0x20
-(gdb) ni
-(gdb) i b
+<div class="highlight"><pre><span class="o">(</span>gdb<span class="o">)</span> disassemble foo
+<span class="o">(</span>gdb<span class="o">)</span> b *foo+40
+<span class="o">(</span>gdb<span class="o">)</span> r
+<span class="o">(</span>gdb<span class="o">)</span> display/i <span class="nv">$pc</span>
+<span class="o">(</span>gdb<span class="o">)</span> x/10xw <span class="nv">$ebp</span>+0x10
+<span class="o">(</span>gdb<span class="o">)</span> x/20xw <span class="nv">$esp</span>-0x20
+<span class="o">(</span>gdb<span class="o">)</span> ni
+<span class="o">(</span>gdb<span class="o">)</span> i b
 </pre></div>
 </div>
 <div class="section" id="buffer-overflow">
@@ -73,7 +73,7 @@
 <div class="highlight"><pre>gcc -z execstack
 </pre></div>
 <p>Disable address space layout randomization</p>
-<div class="highlight"><pre>echo 0 &gt; /proc/sys/kernel/randomize_va_space
+<div class="highlight"><pre><span class="nb">echo </span>0 &gt; /proc/sys/kernel/randomize_va_space
 </pre></div>
 </div>
 

@@ -53,39 +53,39 @@
             </section>
             <p>Using IDA Pro's impressive F5 decompilation, we discover sub_80485D7() is the
 most interesting part</p>
-<div class="highlight"><pre>......
-v6 = ptrace(0, 0, 1, 0);
-......
-if ( a1 != 14 )
-{
-    if ( a1 != 12 )
-    {
-        dword_804A044 = loc_8048707;
-        src = loc_8048720;
-        v4 = strlen(*(const char **)(a2 + 28));
-        strncpy(dest, *(const char **)(a2 + 28), v4);
-        if ( v6 &gt;= 0 )
-            memcpy(dword_804A044, src, src - dword_804A044);
-    }
-    puts(&quot;uhhh....it&#39;s something wrong.&quot;);
-    exit(0);
-}
-system(&quot;/bin/sh&quot;);
-return 0;
-......
+<div class="highlight"><pre><span class="p">......</span>
+<span class="n">v6</span> <span class="o">=</span> <span class="n">ptrace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+<span class="p">......</span>
+<span class="k">if</span> <span class="p">(</span> <span class="n">a1</span> <span class="o">!=</span> <span class="mi">14</span> <span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span> <span class="n">a1</span> <span class="o">!=</span> <span class="mi">12</span> <span class="p">)</span>
+    <span class="p">{</span>
+        <span class="n">dword_804A044</span> <span class="o">=</span> <span class="n">loc_8048707</span><span class="p">;</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="n">loc_8048720</span><span class="p">;</span>
+        <span class="n">v4</span> <span class="o">=</span> <span class="n">strlen</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">**</span><span class="p">)(</span><span class="n">a2</span> <span class="o">+</span> <span class="mi">28</span><span class="p">));</span>
+        <span class="n">strncpy</span><span class="p">(</span><span class="n">dest</span><span class="p">,</span> <span class="o">*</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">**</span><span class="p">)(</span><span class="n">a2</span> <span class="o">+</span> <span class="mi">28</span><span class="p">),</span> <span class="n">v4</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span> <span class="n">v6</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="p">)</span>
+            <span class="n">memcpy</span><span class="p">(</span><span class="n">dword_804A044</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">src</span> <span class="o">-</span> <span class="n">dword_804A044</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">puts</span><span class="p">(</span><span class="s">&quot;uhhh....it&#39;s something wrong.&quot;</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+<span class="n">system</span><span class="p">(</span><span class="s">&quot;/bin/sh&quot;</span><span class="p">);</span>
+<span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">......</span>
 </pre></div>
 <p>The program will copy the character(s) after 7th (including #7) character of a2
 to dest. But dest is not used anymore (suspicious). Just keep in mind.</p>
 <p>According to the text file (linux-anti-debugging.txt) from the hint</p>
-<div class="highlight"><pre>int main()
-{
-    if (ptrace(PTRACE_TRACEME, 0, 1, 0) &lt; 0) {
-        printf(&quot;DEBUGGING... Bye\n&quot;);
-        return 1;
-    }
-    printf(&quot;Hello\n&quot;);
-    return 0;
-}
+<div class="highlight"><pre><span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">ptrace</span><span class="p">(</span><span class="n">PTRACE_TRACEME</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;DEBUGGING... Bye</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+        <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">&quot;Hello</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
 </pre></div>
 <p><tt class="docutils literal">ptrace()</tt> will return positive integer while the exectuable is not being
 debugged. So the program oc will show &quot;The flag is Support for universal
@@ -93,10 +93,10 @@ suffrage in Hong Kong just kidding. :p&quot; while not being debugged and show
 &quot;uhhh....it's something wrong.&quot; while being debugged.</p>
 <p>Because dest can only contain 16 char, more than 16 char being copied to dest
 will cause the variable, src, being overwritten</p>
-<div class="highlight"><pre>0804A048    ; char dest[16]
-0804A048    dest        db 10h dup(?)
-0804A058    ; void *src
-0804A058    src         dd ?
+<div class="highlight"><pre><span class="err">0804</span><span class="nf">A048</span>    <span class="c1">; char dest[16]</span>
+<span class="err">0804</span><span class="nf">A048</span>    <span class="nv">dest</span>        <span class="nv">db</span> <span class="mh">10h</span> <span class="nv">dup</span><span class="p">(</span><span class="nv">?</span><span class="p">)</span>
+<span class="err">0804</span><span class="nf">A058</span>    <span class="c1">; void *src</span>
+<span class="err">0804</span><span class="nf">A058</span>    <span class="nv">src</span>         <span class="nv">dd</span> <span class="nv">?</span>
 </pre></div>
 <p>So our objective is to jump to 0x08048731, i.e. <tt class="docutils literal"><span class="pre">system(&quot;/bin/sh&quot;)</span></tt>. By
 observation, we only need to overwritten 0x31. 0x31 is actually ASCII &quot;1&quot;. In

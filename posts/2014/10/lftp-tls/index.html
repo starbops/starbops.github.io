@@ -54,15 +54,17 @@
 <h2>Installation</h2>
 <div class="section" id="freebsd">
 <h3>FreeBSD</h3>
-<p><tt class="docutils literal">portmaster ftp/lftp</tt>
-Enable the TLS by checking the box in the configure dialog</p>
+<p>Enable the TLS by checking the box in the configure dialog</p>
+<div class="highlight"><pre><span class="c"># portmaster ftp/lftp</span>
+</pre></div>
 </div>
 <div class="section" id="arch-linux">
 <h3>Arch Linux</h3>
-<p><tt class="docutils literal">abs</tt>
-<tt class="docutils literal">mkdir ~/abs</tt>
-<tt class="docutils literal">cp <span class="pre">-r</span> /var/abs/lftp ~/abs</tt>
-<tt class="docutils literal">cd ~/abs/lftp</tt></p>
+<div class="highlight"><pre><span class="nv">$ </span>abs
+<span class="nv">$ </span>mkdir ~/abs
+<span class="nv">$ </span>cp -r /var/abs/lftp ~/abs
+<span class="nv">$ </span><span class="nb">cd</span> ~/abs/lftp
+</pre></div>
 <p>We need to modify the PKGBUILD of lftp</p>
 <div class="highlight"><pre>...
 depends=(&#39;gcc-libs&#39; &#39;readline&#39; &#39;openssl&#39; &#39;expat&#39; &#39;sh&#39;)
@@ -78,8 +80,11 @@ build() {
 }
 ...
 </pre></div>
-<p><tt class="docutils literal">makepkg <span class="pre">-s</span></tt>
-<tt class="docutils literal">pacman <span class="pre">-U</span> <span class="pre">lftp-4.5.5-1-x86_64.pkg.tar.xz</span></tt></p>
+<p>Compile our patched source code of lftp. After that, install with the package which we
+built.</p>
+<div class="highlight"><pre><span class="nv">$ </span>makepkg -s<span class="sb">``</span>
+<span class="c"># pacman -U lftp-4.5.5-1-x86_64.pkg.tar.xz``</span>
+</pre></div>
 </div>
 <div class="section" id="mac-os-x">
 <h3>Mac OS X</h3>
