@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>GUID Partition Table // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Wed 08 October 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>GUID Partition Table</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/sa/">sa</a>
+                                <a class="post-category" href="/tag/mbr/">mbr</a>
+                                <a class="post-category" href="/tag/gpt/">gpt</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="introduction">
+<h2>Introduction</h2>
+<ul>
+<li><dl class="first docutils">
+<dt>MBR and GPT are partition schemes</dt>
+<dd><ul class="first last simple">
+<li>GPT is a standard for the layout of the partition table on a physical
+hard disk, using globally unique identifiers (GUID).</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">UEFI &lt;-&gt; GPT, BIOS &lt;-&gt; MBR</p>
+</li>
+</ul>
+</div>
+<div class="section" id="master-boot-record-mbr">
+<h2>Master Boot Record (MBR)</h2>
+<div class="section" id="structure">
+<h3>Structure</h3>
+<p>The Master Boot Record (MBR) is the first 512 bytes of a storage device. It
+contains:</p>
+<ul class="simple">
+<li>An operating system bootloader - 446 bytes</li>
+<li>The storage device's partition table (4 primary partitions) - 64 bytes</li>
+<li>MBR boot signature (0xAA55) - 2 bytes</li>
+</ul>
+</div>
+<div class="section" id="constraints">
+<h3>Constraints</h3>
+<ul>
+<li><dl class="first docutils">
+<dt>4 primary partition or 3 primary + 1 extended partitions</dt>
+<dd><ul class="first last simple">
+<li>Arbitrary number of logical partitions within the extended partition</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">The logical partition meta-data is stored in a linked-list structure.</p>
+</li>
+<li><p class="first">One byte partition type codes which leads to many collisions</p>
+</li>
+<li><dl class="first docutils">
+<dt>Maximum addressable size is 2 TiB, i.e. any space beyond 2 TiB cannot be defined as a partition</dt>
+<dd><ul class="first last simple">
+<li>MBR stores partition sector information using 32-bit LBA values</li>
+<li>512 bytes per sector</li>
+<li>512 bytes * (2^32) = 2 TiB</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="booting-process">
+<h3>Booting Process</h3>
+<ul>
+<li><p class="first">System initialization with firmware called BIOS</p>
+</li>
+<li><p class="first">The BIOS looks for the bootloader on the MBR of the first storage device or
+the first partition of the device, then executes it</p>
+</li>
+<li><dl class="first docutils">
+<dt>Bootloader reads the partition table</dt>
+<dd><ul class="first last simple">
+<li>Conventional Windows/DOS MBR bootlaoder will check the partition table
+for one and only one active and primary partition</li>
+<li>GRUB safely ignores this</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">Loading Operating system</p>
+</li>
+<li><p class="first">Common GNU/Linux bootloader include GRUB and Syslinux</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="unified-extensible-firmware-interface-uefi">
+<h2>Unified Extensible Firmware Interface (UEFI)</h2>
+<ul class="simple">
+<li>To replace BIOS</li>
+<li>Provides legecy support for BIOS</li>
+<li>The original EFI specification was developed by Intel</li>
+<li>The UEFI specfication is managed by the Unified EFI forum</li>
+<li>Micro operating system</li>
+<li>Graphical User Interface</li>
+<li>Secure Computing (evil)</li>
+</ul>
+</div>
+<div class="section" id="guid-partition-table-gpt">
+<h2>GUID Partition Table (GPT)</h2>
+<ul class="simple">
+<li>GUID stands for Globally Unique Identifier</li>
+<li>Part of the UEFI specification</li>
+<li>Solves some legacy problems with MBR but also may have compatibility
+issues.</li>
+<li>Can be used also on BIOS system via a protective MBR</li>
+</ul>
+<div class="section" id="advantages">
+<h3>Advantages</h3>
+<ul>
+<li><p class="first">Up to 18 EB (1 EB = 1024 TB) ?</p>
+</li>
+<li><p class="first">No partition type collision because of GUIDs</p>
+</li>
+<li><dl class="first docutils">
+<dt>8 ZiB</dt>
+<dd><ul class="first last simple">
+<li>GPT uses 64-bit LBA</li>
+<li>512 bytes per sector</li>
+<li>512 bytes * (2^64) = 8 ZiB</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="tools">
+<h2>Tools</h2>
+<ul class="simple">
+<li>fdisk</li>
+<li>gdisk</li>
+<li>parted</li>
+<li>gpart</li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
