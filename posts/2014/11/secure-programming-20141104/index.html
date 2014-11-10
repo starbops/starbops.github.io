@@ -110,8 +110,10 @@ Function: libc_system's address is : 0xf75f5970 + 0x262d0 = 0xf761bc40</p>
 <p>Training for &quot;return-oriented programming&quot; attack.</p>
 <ul class="simple">
 <li>int 0x80</li>
-<li>eax: call what</li>
-<li>ebx, ecx: arguments</li>
+<li>eax: call what kind of system call. See reference for Linux system call table.
+In this problem we want to call sys_execve, so we should use &quot;11&quot; for eax.</li>
+<li>ebx, ecx: arguments for system call. In this case we put the address of
+&quot;/bin/sh&quot; which is 0x080be568 into ebx and no need of ecx.</li>
 <li>remember the number of pops, smash the stack</li>
 </ul>
 <div class="section" id="gadget-1">
@@ -161,6 +163,12 @@ terminate the input string unexpectedly.</p>
 <span class="err">80</span><span class="nl">e205e:</span>  <span class="nf">c3</span>                      <span class="nv">ret</span>
 </pre></div>
 </div>
+</div>
+<div class="section" id="reference">
+<h2>Reference</h2>
+<ul class="simple">
+<li><a class="reference external" href="http://docs.cs.up.ac.za/programming/asm/derick_tut/syscalls.html">Linux System Call Table</a></li>
+</ul>
 </div>
 
             <div class="hr"></div>
