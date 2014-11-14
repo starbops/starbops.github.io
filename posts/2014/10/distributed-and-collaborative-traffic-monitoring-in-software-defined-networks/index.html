@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Distributed and Collaborative Traffic Monitoring in Software Defined Networks // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Sat 25 October 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Distributed and Collaborative Traffic Monitoring in Software Defined Networks</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/winlab/">winlab</a>
+                                <a class="post-category" href="/tag/paper/">paper</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="abstraction">
+<h2>Abstraction</h2>
+<ul>
+<li><dl class="first docutils">
+<dt>Two representative monitoring tasks</dt>
+<dd><ul class="first last simple">
+<li>Flow size counting</li>
+<li>Packet sampling</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Distributed and Collaborative Monitoring system (DCM)</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>Allows switches to collaboratively achieve</dt>
+<dd><ul class="first last simple">
+<li>Flow monitoring tasks</li>
+<li>Balance measurement load</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Performs per-flow monitoring</dt>
+<dd><ul class="first last simple">
+<li>Different groups of flows are monitored using different actions</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">Memory-efficient solution for switch data plane</p>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">Highest measurement accuracy given the same memory budget of switches</p>
+</li>
+</ul>
+</div>
+<div class="section" id="introduction">
+<h2>Introduction</h2>
+<ul>
+<li><dl class="first docutils">
+<dt>In most networks, routers/switches independently monitor flows</dt>
+<dd><ul class="first last simple">
+<li>Switches may consumes tremendous resources</li>
+<li>Some flows may not be covered by these switches</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>A monitoring rule includes</dt>
+<dd><ul class="first last simple">
+<li>Matching fields</li>
+<li>An action applied to the flow</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Two essensial requirements of traffic monitoring</dt>
+<dd><ul class="first last simple">
+<li>Load distribution</li>
+<li>Per-flow monitoring</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>The only two approaches that can achieve per-flow monitoring and load
+distribution are rule-based and aggregation-based flow monitoring.</p>
+<ul>
+<li><dl class="first docutils">
+<dt>Rule-based flow monitoring</dt>
+<dd><ul class="first last simple">
+<li>Limited by the switch memory space</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Aggregation-based monitoring</dt>
+<dd><ul class="first last simple">
+<li>Still requires a large rule table</li>
+<li>Potential duplicate samples may occur</li>
+<li>Changes of small flows are hard to observe</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="existing-traffic-measurement-tools">
+<h2>Existing Traffic Measurement Tools</h2>
+<p>NetFlow and sFlow support generic measurement tasks based on packet sampling.
+Many applications, however, require per-flow monitoring, i.e., different
+monitoring actions performed on diffenent flows.</p>
+<div class="section" id="netflow">
+<h3>NetFlow</h3>
+<p>Netflow is a feature that was introduced on Cisco routers that provides the
+ability to collect IP network traffic as it enters or exits an interface. By
+analyzing the data provided by Netflow a network administrator can determine
+things such as the source and destination of traffic, class of service, and the
+causes of congestion. Netflow consists of three components: flow caching, Flow
+Collector, and Data Analyzer.</p>
+</div>
+<div class="section" id="sflow">
+<h3>sFlow</h3>
+<p>sFlow, short for &quot;sampled flow&quot;, is an industry standard for packet export at
+Layer 2 of the OSI model. It provides a means for exporting truncated packets,
+together with interface counters.</p>
+<p>Two types of sampling:</p>
+<ul class="simple">
+<li>Random sampling of packets or application layer operations</li>
+<li>Time-based sampling of counters</li>
+</ul>
+</div>
+</div>
+<div class="section" id="system-design">
+<h2>System Design</h2>
+<p>DCM guarantees the following two properties</p>
+<ol class="arabic simple">
+<li>Every packet of a targeted flow should be monitored by at least one switch
+on its path</li>
+<li>If a packet is monitored by more than one switches, duplicate monitoring can
+be detected</li>
+</ol>
+<div class="section" id="model">
+<h3>Model</h3>
+<ul>
+<li><p class="first">Flows are identified by the 5-tuple, i.e., &lt;SrcIp, DstIp, SrcPort, DstPort,
+Protocol&gt;</p>
+</li>
+<li><dl class="first docutils">
+<dt>There is a centralized SDN controller maintaining a monitoring table</dt>
+<dd><ul class="first last simple">
+<li>The targeted flows</li>
+<li>The corresponding monitor actions</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">A switch records measurement results in its local memory and reports the
+results to the controller periodically</p>
+</li>
+</ul>
+</div>
+<div class="section" id="assumption">
+<h3>Assumption</h3>
+<p>The memory space for monitoring tasks in a switch is limited while the
+controller has enough space to store detailed flow information and monitor
+actions.</p>
+</div>
+<div class="section" id="dcm-data-plane-on-switches">
+<h3>DCM Data Plane on Switches</h3>
+<p>The flow-to-filter matching are based on the hash of a 5-tuple. The DCM
+component does not perform any packet forwarding task.</p>
+<ol class="arabic simple">
+<li>A wildcard rule applies an action to an aggregate of flows</li>
+<li>The function of the admission Bloom filter (admBF) is to filter the flows
+that are not of interest</li>
+<li>The action Bloom filters (actBFs) decides the corresponding monitoring
+actions</li>
+</ol>
+</div>
+<div class="section" id="controller-operations">
+<h3>Controller Operations</h3>
+<ul>
+<li><p class="first">Monitoring load allocation</p>
+</li>
+<li><dl class="first docutils">
+<dt>Bloom filter contruction and updates</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>Real-time Addition and Periodical Reconstruction (RAPR)</dt>
+<dd><ul class="first last simple">
+<li>Add immediately</li>
+<li>Reconstruct periodically</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>False positive detection</dt>
+<dd><ul class="first last">
+<li><p class="first">DCM can control false positive rates, but cannot completely eliminate
+false positives</p>
+</li>
+<li><dl class="first docutils">
+<dt>The controller can maintain copies of Bloom filters installed on switches and the record of flow information</dt>
+<dd><ul class="first last simple">
+<li>Detect all false positives</li>
+<li>Limit the negative influence of them</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
