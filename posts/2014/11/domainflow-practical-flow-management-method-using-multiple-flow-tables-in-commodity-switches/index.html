@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>DomainFlow: Practical Flow Management Method using Multiple Flow Tables in Commodity Switches // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Thu 13 November 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>DomainFlow: Practical Flow Management Method using Multiple Flow Tables in Commodity Switches</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/winlab/">winlab</a>
+                                <a class="post-category" href="/tag/paper/">paper</a>
+                                <a class="post-category" href="/tag/openflow/">openflow</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="introduction">
+<h2>Introduction</h2>
+<ul>
+<li><p class="first">The demand for bandwidth between servers inside a data center is rapidly increasing</p>
+<blockquote>
+<ul class="simple">
+<li>High bisection bandwidth and high availability</li>
+<li>Efficient use of multiple paths between pair of end hosts</li>
+</ul>
+</blockquote>
+</li>
+<li><p class="first">The controller needs to use switch hardware resources or multiple flow tables efficiently for constructing a scalable network</p>
+</li>
+<li><p class="first">OpenFlow is not sufficient for fast failover for high availability in the multipath</p>
+</li>
+<li><p class="first">DomainFlow: a practical flow management using OpenFlow for commodity switches</p>
+</li>
+</ul>
+</div>
+<div class="section" id="background">
+<h2>Background</h2>
+<div class="section" id="tcam-for-wild-carded-matching-rule">
+<h3>TCAM for Wild-carded Matching Rule</h3>
+<ul>
+<li><p class="first">Ethernet switches uses TCAMs to implement wild-carded OpenFlow rules</p>
+</li>
+<li><p class="first">TCAM consumes much higher area and power per entry than SRAM</p>
+<blockquote>
+<ul class="simple">
+<li>On-chip TCAM sizes are typically limited to a few thousand entries</li>
+</ul>
+</blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="overhead-for-flow-level-management">
+<h3>Overhead for Flow Level Management</h3>
+<ul>
+<li><p class="first">Efficient multipath usage is possible by selecting path for every flow</p>
+</li>
+<li><p class="first">The number of matching rules increases when we specify each flow for multipath distribution</p>
+</li>
+<li><p class="first">Specify each flow for multipath distribution increases the number of matching rules</p>
+<blockquote>
+<ul class="simple">
+<li>OpenFlow requires h*(h-1)*v*v wild-carded matching rules for traffic distribution</li>
+</ul>
+</blockquote>
+</li>
+<li><p class="first">OpenFlow-based path selection is limited due to the switch hardware resources</p>
+</li>
+<li><p class="first">OpenFlow provides a group action to select path from multiple output ports</p>
+<blockquote>
+<ul class="simple">
+<li>The distribution algorithm is not defined in the specification</li>
+</ul>
+</blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="fast-failover-for-high-availability">
+<h3>Fast Failover for High Availability</h3>
+<ul>
+<li><p class="first">OpenFlow defines a fast failover mechanism for the controller to specify the alternate port</p>
+<blockquote>
+<ul class="simple">
+<li>Enabling the switch to change forwarding without requiring a round trip to the controller</li>
+<li>However, it does not work with multiple switches in the multipath</li>
+</ul>
+</blockquote>
+</li>
+</ul>
+</div>
+</div>
+<div class="section" id="domainflow">
+<h2>DomainFlow</h2>
+<div class="section" id="domainflow-flow-model">
+<h3>DomainFlow Flow Model</h3>
+<ul>
+<li><p class="first">The flow model consists of two domains</p>
+<blockquote>
+<ul class="simple">
+<li>Controller configures the boundary (turning point) on a per flow basis</li>
+</ul>
+</blockquote>
+</li>
+<li><p class="first">In Domain 1</p>
+<blockquote>
+<ul class="simple">
+<li>A flow is controlled with a wild-carded matching table (WMT)</li>
+<li>For path selection</li>
+<li>The flow is handled by the WMT if destination lookup failure (DLF) occurs in the EMT</li>
+</ul>
+</blockquote>
+</li>
+<li><p class="first">In Domain 2</p>
+<blockquote>
+<ul class="simple">
+<li>A flow is controlled with an exact matching table (EMT)</li>
+<li>For unicast, multicast, broadcast packets</li>
+<li>If DLF occurs, handled by the controller</li>
+</ul>
+</blockquote>
+</li>
+<li><p class="first">Using proactive mode to reduce the flow setup overhead</p>
+</li>
+</ul>
+<img alt="Figure 1" src="/images/figure-1.png" />
+</div>
+<div class="section" id="domainflow-use-case">
+<h3>DomainFlow Use Case</h3>
+<ul>
+<li><p class="first">DomainFlow can be used in various types of applications</p>
+<blockquote>
+<ul class="simple">
+<li>Path selection in multipath networks with tree structure</li>
+<li>End-host mode to represent servers</li>
+<li>Forwarding of FCoE (Fibre Channel over Ethernet) traffic to FCF (FCoE Forwarder)</li>
+</ul>
+</blockquote>
+</li>
+<li><p class="first">Domain 1 is defined in which no destination exists at the server-facing ports of a switch</p>
+</li>
+<li><p class="first">Domain 2 is defined in which a destination exists at the server-facing ports of a switch</p>
+</li>
+<li><p class="first">The upward flow from a source server is controlled with the WMT towards the turning point</p>
+</li>
+<li><p class="first">The downward flow is controlled with the EMT towards a destination server</p>
+</li>
+</ul>
+<img alt="Figure 2" src="/images/figure-2.png" />
+</div>
+<div class="section" id="domainflow-flow-table-structure">
+<h3>DomainFlow Flow Table Structure</h3>
+<ul>
+<li><p class="first">A commodity switch normally has both an EMT and WMT</p>
+<blockquote>
+<ul class="simple">
+<li>The EMT is implemented as a forwarding database (FDB) using SRAM</li>
+<li>The WMT is implemented as an access control list (ACL) using TCAM</li>
+</ul>
+</blockquote>
+</li>
+<li><p class="first">The priority of EMT is higher than that of WMT</p>
+</li>
+<li><p class="first">Use bit maksing to further reduce the number of WMT entries</p>
+</li>
+</ul>
+<img alt="Figure 3" src="/images/figure-3.png" />
+</div>
+<div class="section" id="fast-failover-in-multipath">
+<h3>Fast Failover in Multipath</h3>
+<ul class="simple">
+<li>The controller proactively configures a group type of Fast Failover</li>
+<li>This mechanism works only when a switch detects a link failure on the directly connected link</li>
+<li>Notify other affected switches about the link failure</li>
+<li>Appropriately change forwarding without intervention of the controller</li>
+</ul>
+<img alt="Figure 5" src="/images/figure-5.png" />
+</div>
+</div>
+<div class="section" id="application">
+<h2>Application</h2>
+<p>Applied the DomainFlow method to multipath flow management in the VXLAN overlay network to enable network virtualization</p>
+<div class="section" id="vxlan-packet-encapsulation">
+<h3>VXLAN Packet Encapsulation</h3>
+<ul class="simple">
+<li>VXLAN tunnel end point (VTEP) originates and terminates VXLAN tunnels</li>
+<li>Additional headers are Outer Ethernet, Outer IP, Outer UDP, and VXLAN</li>
+<li>The VXLAN header includes 24 bits of VXLAN network identifier (VNI)</li>
+</ul>
+<img alt="Figure 6" src="/images/figure-6.png" />
+</div>
+<div class="section" id="multipath-traffic-distribution">
+<h3>Multipath Traffic Distribution</h3>
+<ul>
+<li><p class="first">Traffic from/to virtual machines is aggregated/disaggregated at a VTEP</p>
+</li>
+<li><p class="first">It is important to distribute traffic in multipath networks reflecting original payloads for high performance</p>
+<blockquote>
+<ul class="simple">
+<li>The UDP source port of the outer header to be a hash of the inner Ethernet frame's header</li>
+</ul>
+</blockquote>
+</li>
+</ul>
+</div>
+<div class="section" id="domainflow-flow-management">
+<h3>DomainFlow Flow Management</h3>
+<ul class="simple">
+<li>OpenFlow Vendor Action is of the form:</li>
+</ul>
+<img alt="Figure 9" src="/images/figure-9.png" />
+</div>
+</div>
+<div class="section" id="protype-evaluation">
+<h2>Protype &amp; Evaluation</h2>
+<div class="section" id="switch-prototype">
+<h3>Switch Prototype</h3>
+<ul>
+<li><p class="first">Based on OpenFlow 1.0</p>
+</li>
+<li><p class="first">Running an OpenFlow agent connected to the switch</p>
+<blockquote>
+<ul class="simple">
+<li>Communicates with the controller over secure channel</li>
+<li>Configures the switch using the enhanced CLI</li>
+</ul>
+</blockquote>
+</li>
+</ul>
+<img alt="Figure 10" src="/images/figure-10.png" />
+</div>
+<div class="section" id="preliminary-evaluation-results">
+<h3>Preliminary Evaluation Results</h3>
+<ul class="simple">
+<li>Can be implemented using a commodity switch</li>
+<li>Small number of flow table entries</li>
+</ul>
+<img alt="Table 2" src="/images/table-2.png" />
+</div>
+<div class="section" id="flow-table-efficiency">
+<h3>Flow Table Efficiency</h3>
+<ul class="simple">
+<li>Traditional method installed matching rules in the TCAM</li>
+<li>DomainFlow use FDB and ACL to reduce the total number of flow entries</li>
+</ul>
+<img alt="Figure 11" src="/images/figure-11.png" />
+</div>
+</div>
+<div class="section" id="conclusion">
+<h2>Conclusion</h2>
+<ul>
+<li><dl class="first docutils">
+<dt>Multipath flow management is possible with a small number of flow entries</dt>
+<dd><ul class="first last simple">
+<li>Bit masking and wild-carded matching in Domain 1</li>
+<li>Exact matching in Domain 2</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">Fast failover using OpenFlow for commodity switches</p>
+</li>
+<li><dl class="first docutils">
+<dt>Applied a prototype of DomainFlow</dt>
+<dd><ul class="first last simple">
+<li>Reducing the total number of flow entries to 1/128</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</div>
+<div class="section" id="questions">
+<h2>Questions</h2>
+<ul class="simple">
+<li>Use bit masking on what to reduce the WMT entries</li>
+<li>Wild-carded matching</li>
+<li>Overlay network</li>
+<li>OpenFlow Fast Failover mechanism</li>
+<li>Vendor action for path selection</li>
+</ul>
+</div>
+<div class="section" id="notes">
+<h2>Notes</h2>
+<div class="section" id="vxlan">
+<h3>VXLAN</h3>
+<ul class="simple">
+<li>VNI stands for &quot;VXLAN Network Identifier&quot; (or VXLAN Segment ID)</li>
+<li>The term &quot;VXLAN segment&quot; is used interchangeably with the term &quot;VXLAN overlay network&quot;</li>
+<li>The end point of the tunnel (VXLAN Tunnel End Point or VTEP) is located within the hypervisor on the server that hosts the VM</li>
+<li>VMs in different VXLAN overlay networks cannot communicate with each other</li>
+</ul>
+</div>
+<div class="section" id="tcam">
+<h3>TCAM</h3>
+<ul class="simple">
+<li>TCAM 以內容查找地址，與一般 memory 不同</li>
+<li>一般 memory 中每個 bit 只能表示兩個值：0 與 1。而 TCAM 每個 bit 可以表示三個值：0、1 與 X，X 表示 don't care</li>
+<li>TCAM 的一條 entry 在物理上是用兩條 entry 所組成，一條放 data、另一條存放相應的 mask。因此可實現 0/1/X 的表示</li>
+<li>TCAM 可支持各種 lookup key 任意組合查找，任意 mask 掉任何不關心的字段</li>
+<li>一條 TCAM entry 至少抵得上五條 DRAM/SRAM entry，如果晶片內部放了太大的 TCAM 會導致晶片成本和功耗直線上升</li>
+</ul>
+</div>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="http://conferences.sigcomm.org/co-next/2013/program/p399.pdf">DomainFlow: Practical Flow Management Method using Multiple Flow Tables in Commodity Switches</a></li>
+<li><a class="reference external" href="http://z956.logdown.com/posts/167516-ecmp">Multi-path Dijkstra Algorithm &amp; ECMP</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
