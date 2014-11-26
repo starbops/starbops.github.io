@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Ubuntu Apt Cron Cache Has Broken Packages // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Wed 26 November 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Ubuntu Apt Cron Cache Has Broken Packages</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/linux/">linux</a>
+                                <a class="post-category" href="/tag/ubuntu/">ubuntu</a>
+                                <a class="post-category" href="/tag/sysadm/">sysadm</a>
+                                <a class="post-category" href="/tag/kernel/">kernel</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="problem-encountered">
+<h2>Problem Encountered</h2>
+<p>I received a root mail from my machine this morning, contents are shown below:</p>
+<div class="highlight"><pre>Subject: Cron &lt;root@win&gt; test -x /usr/sbin/anacron || ( cd / &amp;&amp; run-parts --report /etc/cron.daily )
+
+/etc/cron.daily/apt:
+Cache has broken packages, exiting
+</pre></div>
+</div>
+<div class="section" id="search-for-solutions">
+<h2>Search for Solutions</h2>
+<p>First of all, collect all information which could be useful for later searching.
+Unfortunately, the only information is that root mail. So I fed Google with the
+error message, I found one post discussing about this problem. Someone said that
+was because the root file system was low on free inodes, but not free space.
+We can check this by <tt class="docutils literal">df <span class="pre">-i</span></tt></p>
+<div class="highlight"><pre><span class="nv">$ </span>df -i
+Filesystem             Inodes  IUsed     IFree IUse% Mounted on
+/dev/sda1              327680 324403      3277   99% /
+udev                   253837    445    253392    1% /dev
+tmpfs                  256454    351    256103    1% /run
+none                   256454      2    256452    1% /run/lock
+none                   256454      1    256453    1% /run/shm
+/dev/sdd1              327680   4013    323667    2% /lib/modules
+/dev/md0              1310720 240845   1069875   19% /home
+</pre></div>
+<p>Ah-ha! This might be the problem! So our goal is turning to &quot;how to reduce the
+inodes which are being used?&quot;. The guy in the forum also mentioned that removing
+old linux-kernel-* and linux-headers-* will fix the problem. But how to remove
+them? Where are they?</p>
+<p>Another article told us how to purge old and useless linux images and header
+packages by using <tt class="docutils literal">dpkg</tt></p>
+<div class="highlight"><pre><span class="c"># dpkg -l &#39;linux-*&#39; | sed &#39;/^ii/!d;/&#39;&quot;$(uname -r | sed &quot;s/\(.*\)-\([^0-9]\+\)/\1/&quot;)&quot;&#39;/d;s/^[^ ]* [^ ]* \([^ ]*\).*/\1/;/[0-9]/!d&#39; | xargs sudo apt-get -y purge</span>
+</pre></div>
+<p>After seeing this, I gave it a try but failed with the dependency warning. The
+warning said that I must install &quot;linux-headers-3.2.0-72&quot; because
+&quot;linux-headers-3.2.0-72-generic&quot; needs it. So I install the dependency according
+to the instruction it provided:</p>
+<div class="highlight"><pre><span class="c"># apt-get -f install</span>
+</pre></div>
+<p>Unfortunately, it failed again because there was no free disk space any more.
+I faced a dead lock between installation and uninstallation! What a joke...</p>
+</div>
+<div class="section" id="my-solution-ugly">
+<h2>My Solution, Ugly</h2>
+<p>Also, the running kernel version is not the newest, which means the system
+administrator has not reboot the machine since kernel upgrade.</p>
+<div class="highlight"><pre><span class="nv">$ </span>uname -r
+3.2.0-67-generic
+</pre></div>
+<p>I found many <tt class="docutils literal"><span class="pre">linux-headers-3.2.0-xx</span></tt> and <tt class="docutils literal"><span class="pre">linux-headers-3.2.0-xx-generic</span></tt>
+are under <tt class="docutils literal">/usr/src</tt> directory. So chances are that I may move those
+directories to another place which is not under root directory. And I did it.
+Now we can install the dependencies by <tt class="docutils literal">sudo <span class="pre">apt-get</span> <span class="pre">-f</span> install <span class="pre">linux-headers-3.2.0-72</span></tt></p>
+<p>After the dependencies were installed, we can remove all the previous kernel
+images, headers and modules, leaving only the current one intact. Using the one
+liner specified in last section will do the trick. After all, our precious disk
+space is returned!</p>
+<p>To prove that our work does solve the original problem, we simply run the cron
+job manually:</p>
+<div class="highlight"><pre><span class="nv">$ </span><span class="nb">cd</span> /
+<span class="c"># run-parts --report /etc/corn.daily</span>
+</pre></div>
+<p>Waiting about 20 minutes, this time no more errors are shown. Hooray!</p>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="https://bugs.launchpad.net/ubuntu/+source/apt/+bug/482200">/etc/cron.daily/apt: Cache has broken packages, exiting</a></li>
+<li><a class="reference external" href="https://howto8165.wordpress.com/2014/08/13/remove-old-linux-kernels/">How to Remove Old Linux Kernel Headers</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
