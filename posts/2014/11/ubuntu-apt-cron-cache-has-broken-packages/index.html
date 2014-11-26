@@ -108,8 +108,10 @@ directories to another place which is not under root directory. And I did it.
 Now we can install the dependencies by <tt class="docutils literal">sudo <span class="pre">apt-get</span> <span class="pre">-f</span> install <span class="pre">linux-headers-3.2.0-72</span></tt></p>
 <p>After the dependencies were installed, we can remove all the previous kernel
 images, headers and modules, leaving only the current one intact. Using the one
-liner specified in last section will do the trick. After all, our precious disk
-space is returned!</p>
+liner specified in last section will do the trick. (But it is important that the
+machine should reboot before purging the old kernel images. If you did not
+reboot, next time rebooting the machine will fail because it cannot find the
+kernel image.) After all, our precious disk space is returned!</p>
 <p>To prove that our work does solve the original problem, we simply run the cron
 job manually:</p>
 <div class="highlight"><pre><span class="nv">$ </span><span class="nb">cd</span> /
