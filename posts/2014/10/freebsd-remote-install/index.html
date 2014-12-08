@@ -94,7 +94,8 @@ chroot /mnt
 </pre></div>
 <div class="highlight"><pre>passwd
 <span class="nb">echo</span> <span class="s1">&#39;nameserver 8.8.8.8&#39;</span> &gt; /etc/resolv.conf
-mkdir -p /compat/linux/proc
+mkdir -p /usr/compat/linux/proc
+ln -s /usr/compat /compat
 ln -s /usr/share/zoneinfo/Asia/Taipei /etc/localtime
 </pre></div>
 <p>Edit <tt class="docutils literal">/etc/rc.conf</tt></p>
