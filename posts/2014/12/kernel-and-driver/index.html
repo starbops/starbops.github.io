@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Kernel and Driver // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Mon 08 December 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Kernel and Driver</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/sa/">sa</a>
+                                <a class="post-category" href="/tag/freebsd/">freebsd</a>
+                                <a class="post-category" href="/tag/kernel/">kernel</a>
+                                <a class="post-category" href="/tag/driver/">driver</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="kernel-wide-design-approaches">
+<h2>Kernel-wide Design Approaches</h2>
+<div class="section" id="monolithic-kernel">
+<h3>Monolithic Kernel</h3>
+<ul>
+<li><dl class="first docutils">
+<dt>Entire operating system is working in kernel space</dt>
+<dd><ul class="first last simple">
+<li>Efficient</li>
+<li>But hard to maintain</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">Can dynamically load executable modules at runtime</p>
+</li>
+<li><p class="first">Linux, *BSD, MS-DOS, Windows 9x series</p>
+</li>
+</ul>
+</div>
+<div class="section" id="micro-kernel">
+<h3>Micro Kernel</h3>
+<ul class="simple">
+<li>Address space management, inter-process communication, scheduling</li>
+<li>Mach, QNX, L4</li>
+</ul>
+</div>
+<div class="section" id="hybrid-kernel">
+<h3>Hybrid Kernel</h3>
+<ul class="simple">
+<li>Monolithic + Micro</li>
+<li>MacOS, Windows NT series, DragonFly BSD</li>
+</ul>
+</div>
+</div>
+<div class="section" id="why-building-custom-kernel">
+<h2>Why Building Custom Kernel</h2>
+<p>Building a custom kernel is often a rite of passage for advanced FreeBSD users.
+The procedure, however, is time consuming, can provide benefites to the FreeBSD
+system. Unlike <tt class="docutils literal">GENERIC</tt> kernel provided by the default FreeBSD system aims to
+be generic, it must support a very wide range of hardware. A customized kernel
+can be stirpped down to fit your needs. The advantages are listed below:</p>
+<ul class="simple">
+<li>Faster boot time</li>
+<li>Lower memory usage</li>
+<li>Additional hardware support</li>
+</ul>
+</div>
+<div class="section" id="finding-the-system-hardware">
+<h2>Finding The System Hardware</h2>
+<p>If your FreeBSD is dual boot with Windows, maybe Windows device manager can help
+you out. Otherwise, use the following methods can list the hardware which are
+currently in your box.</p>
+<ul class="simple">
+<li><tt class="docutils literal">pciconf <span class="pre">-l</span></tt></li>
+<li><tt class="docutils literal">cat /var/log/dmesg.boot</tt></li>
+</ul>
+</div>
+<div class="section" id="the-configuration-file">
+<h2>The Configuration File</h2>
+<p>If <tt class="docutils literal">/usr/src</tt> does not exist or it is empty, download it using Subversion:</p>
+<div class="highlight"><pre><span class="c"># svn checkout https://svn0.us-west.FreeBSD.org/base/release/9.2.0 /usr/src</span>
+</pre></div>
+<p>The sample kernel configuration file resides in <tt class="docutils literal"><span class="pre">/usr/src/sys/&lt;arch&gt;/conf</span></tt>
+sub-directory, the file named <tt class="docutils literal">GENERIC</tt> being the one used to build your
+initial installation kernel.</p>
+<p>Do not make edits to <tt class="docutils literal">GENERIC</tt> directly. Also, we will keep the kernel
+configuration file elsewhere and create a symbolic link to the file.</p>
+<div class="highlight"><pre><span class="c"># cd /usr/src/sys/amd64/conf</span>
+<span class="c"># mkdir /root/kernels</span>
+<span class="c"># cp GENERIC /root/kernels/MYKERNEL</span>
+<span class="c"># ln -s /root/kernels/MYKERNEL</span>
+</pre></div>
+<div class="section" id="references-for-configuring-your-own-kernel">
+<h3>References for Configuring Your Own Kernel</h3>
+<p>The file NOTES contains entries and documentation for all possible devices, not
+just those commonly used. It is the successor of the ancient LINT file, but in
+contrast to LINT, it is not buildable as a kernel but a pure reference and
+documentation file.</p>
+<p>To build a file which contains all available options:</p>
+<div class="highlight"><pre><span class="c"># cd /usr/src/sys/amd64/conf</span>
+<span class="c"># make LINT</span>
+</pre></div>
+<p>Reminder: When in doubt, just leave support in the kernel.</p>
+</div>
+</div>
+<div class="section" id="building-and-installing-a-custom-kernel">
+<h2>Building and Installing a Custom Kernel</h2>
+<p>First change directory into <tt class="docutils literal">/usr/src</tt> then compile the custom kernel by
+specifying the configuration file:</p>
+<div class="highlight"><pre><span class="c"># cd /usr/src</span>
+<span class="c"># make buildkernel KERNCONF=MYKERNEL</span>
+</pre></div>
+<p>Install the compiled kernel into <tt class="docutils literal">/boot/kernel/kernel</tt>. The old kernel will be
+moved to <tt class="docutils literal">/boot/kernel.old/kernel</tt>:</p>
+<div class="highlight"><pre><span class="c"># make installkernel KERNCONF=MYKERNEL</span>
+</pre></div>
+<p>By default, all kernel modules are rebuilt when a custom kernel is compiled. To
+compile the kernel faster, edit the <tt class="docutils literal">/etc/make.conf</tt> before starting to build
+the kernel:</p>
+<div class="highlight"><pre>MODULES_OVERRIDE = linux acpi
+</pre></div>
+<p>Alternately, this lists the modules which are excluded from the build process:</p>
+<div class="highlight"><pre>WITHOUT_MODULES = linux acpi sound
+</pre></div>
+</div>
+<div class="section" id="troubleshooting-and-failover">
+<h2>Troubleshooting and Failover</h2>
+<div class="section" id="config-fails">
+<h3>Config Fails</h3>
+<p>If <tt class="docutils literal">config</tt> fails, it will show up an error message along with the line of the
+error configuration. Try to fix it by comparing your configuration to
+<tt class="docutils literal">GENERIC</tt> or <tt class="docutils literal">NOTES</tt>.</p>
+<div class="highlight"><pre>config: line 17: syntax error
+</pre></div>
+</div>
+<div class="section" id="make-fails">
+<h3>Make Fails</h3>
+<p>Sometimes the error is not severe enough to be caught by <tt class="docutils literal">config</tt>, then
+<tt class="docutils literal">make</tt> will failed. Send an email to the FreeBSD general questions mailing list
+with the kernel configuration file attached, if everything in the configuration
+file seems right.</p>
+</div>
+<div class="section" id="the-kernel-does-not-boot">
+<h3>The Kernel Does Not Boot</h3>
+<blockquote>
+<ul class="simple">
+<li><tt class="docutils literal">/var/log/messages</tt></li>
+<li><tt class="docutils literal">dmesg</tt></li>
+</ul>
+</blockquote>
+<p>Make sure to keep a copy of <tt class="docutils literal">GENERIC</tt>, or some kernel that is known to work.
+Otherwise the <tt class="docutils literal">/boot/kernel/kernel.old</tt> will be overwritten with the last
+installed kernel, which may not be bootable.</p>
+<div class="highlight"><pre><span class="c"># mv /boot/kernel /boot/kernel.bad</span>
+<span class="c"># mv /boot/kernel.good /boot/kernel</span>
+</pre></div>
+</div>
+<div class="section" id="the-kernel-works-but-some-utilities-do-not">
+<h3>The Kernel Works, But Some Utilities Do Not</h3>
+<p>After successfully compiled the custom kernel and rebooted the
+machine, everything looks well except some utilities do not work. This is
+because the kernel version differs from the one that the system utilities have
+been built with. For example, a kernel built from -CURRENT source is installed
+on a -RELEASE system, many system status command, e.g., <tt class="docutils literal">ps</tt>, <tt class="docutils literal">vmstat</tt> will
+not work.</p>
+<p>So the only way to use them as usual is to &quot;recompile and install a world&quot; built
+with the same version of the source tree as the kernel.</p>
+</div>
+</div>
+<div class="section" id="rebuilding-world">
+<h2>Rebuilding World</h2>
+<div class="highlight"><pre><span class="c"># cd /usr/obj</span>
+<span class="c"># chflags -R noschg *</span>
+<span class="c"># rm -rf *</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># cd /usr/src</span>
+<span class="c"># make buildworld</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># make buildkernel KERNCONF=MYKERNEL</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># make installkernel KERNCONF=MYKERNEL</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># shutdown now</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># mount -u /</span>
+<span class="c"># mount -a -t ufs</span>
+<span class="c"># swapon -a</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># zfs set readonly=off zRoot</span>
+<span class="c"># zfs mount -a</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># kbdmap</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># adjkerntz -i</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># mergemaster -p</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># cd /usr/src</span>
+<span class="c"># make installworld</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># mergemaster -iF</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># make delete-old</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># reboot</span>
+</pre></div>
+<div class="highlight"><pre><span class="c"># portmaster -af</span>
+<span class="c"># make delete-old-libs</span>
+</pre></div>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="http://www.freebsd.org/doc/en/books/handbook/kernelconfig.html">Chapter 9. Configuring the FreeBSD Kernel</a></li>
+<li><a class="reference external" href="http://www.freebsd.org/doc/en/books/handbook/makeworld.html">Chapter 24.6. Rebuilding World</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
