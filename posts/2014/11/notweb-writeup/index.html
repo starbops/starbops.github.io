@@ -53,78 +53,93 @@
             </section>
             <div class="section" id="finding-weak-points">
 <h2>Finding Weak Points</h2>
-<p>使用 gdb 進行 dynamic analysis 發現 <tt class="docutils literal">main()</tt> 會 call <tt class="docutils literal">get_request()</tt> ，下斷
-點在 call <tt class="docutils literal">get_request()</tt> 的地方 step in 進去一步一步看。程式呼叫 <tt class="docutils literal">fgets()</tt>
-讀取 input，並會以 <tt class="docutils literal">strtok()</tt> 根據空白來截斷字串。若整個 string 只有一個 word
-的話會 call exit 程式結束，否則繼續執行下去。</p>
+<p>After using gdb to do the dynamic analysis, I found that function <tt class="docutils literal">main()</tt>
+will call function <tt class="docutils literal">get_request()</tt>. So I set the break point at the line
+which calls <tt class="docutils literal">get_request()</tt> and check it out step by step. The program calls
+<tt class="docutils literal">fgets()</tt> to get the input, and using <tt class="docutils literal">strtok()</tt> to chop the string
+according to the spaces. If the whold string only consists of one single word,
+it calls exit to terminate the program. Otherwise the program will go on.</p>
 <div class="highlight"><pre><span class="err">08048</span><span class="nl">a51:</span>       <span class="err">89</span> <span class="err">45</span> <span class="nf">ec</span>                <span class="nv">mov</span>    <span class="kt">DWORD</span> <span class="nv">PTR</span> <span class="p">[</span><span class="nb">ebp</span><span class="o">-</span><span class="mh">0x14</span><span class="p">],</span><span class="nb">eax</span>
 <span class="err">08048</span><span class="nl">a54:</span>       <span class="err">83</span> <span class="err">7</span><span class="nf">d</span> <span class="nv">ec</span> <span class="mi">00</span>             <span class="nv">cmp</span>    <span class="kt">DWORD</span> <span class="nv">PTR</span> <span class="p">[</span><span class="nb">ebp</span><span class="o">-</span><span class="mh">0x14</span><span class="p">],</span><span class="mh">0x0</span>
 <span class="err">08048</span><span class="nl">a58:</span>       <span class="err">75</span> <span class="err">0</span><span class="nf">c</span>                   <span class="nv">jne</span>    <span class="mi">8048</span><span class="nv">a66</span> <span class="o">&lt;</span><span class="nv">get_request</span><span class="o">+</span><span class="mh">0x90</span><span class="o">&gt;</span>
 <span class="err">08048</span><span class="nl">a5a:</span>       <span class="nf">c7</span> <span class="mi">04</span> <span class="mi">24</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span> <span class="mi">00</span>    <span class="nv">mov</span>    <span class="kt">DWORD</span> <span class="nv">PTR</span> <span class="p">[</span><span class="nb">esp</span><span class="p">],</span><span class="mh">0x0</span>
 <span class="err">08048</span><span class="nl">a61:</span>       <span class="nf">e8</span> <span class="nv">ea</span> <span class="nv">fb</span> <span class="nv">ff</span> <span class="nv">ff</span>          <span class="nv">call</span>   <span class="mi">8048650</span> <span class="o">&lt;</span><span class="nv">exit@plt</span><span class="o">&gt;</span>
 </pre></div>
-<p><tt class="docutils literal">buf</tt> 吃進一行所有 input，並依序依照 ' ' 和 ':' 來截斷各個 token，示意圖如下：</p>
+<p>The variable <tt class="docutils literal">buf</tt> sucks in the whole line of input then splits the input
+into tokens according to space and colon. A diagram is showed below:</p>
 <div class="highlight"><pre>ORIGINAL INPUT:
 
 GET /echo:%x%x%x%x%x
 |   |     |
 |   |     v
-|   v     被存入 ``main()`` 中的 local variable，在此以 ``s`` 作為範例
-v   字串長度為 5，第一個字元後被存入 global ``file``
-被捨棄
+|   v     stored in local variable in ``main()``, using ``s`` as example
+v   length of the string is 5, the first character is stored in ``file``
+abandoned
 </pre></div>
-<p>此外在 <tt class="docutils literal">echo()</tt> 中看到又 <tt class="docutils literal">printf(buf)</tt> 這樣的 code，可利用 format string
-leak 任意 memory 甚至寫值進去。</p>
-<p>xxx yyy:zzz</p>
-<p>yyy &lt;= 19: filename
-zzz 可以 100000 長</p>
-<p>0x0804b140: &lt;buf&gt;
-0x080637e0: &lt;file&gt;</p>
+<p>And there is a piece of code that contains <tt class="docutils literal">printf(buf)</tt> in the function
+<tt class="docutils literal">echo()</tt>. With this, exploiting the vulnerability of format string to leak
+arbitrary memory is easy. Even write some values into memory could be possible.</p>
 </div>
 <div class="section" id="weird-filter">
 <h2>Weird Filter</h2>
-<p>在 <tt class="docutils literal">get_request()</tt> 中，return 前會將 global <tt class="docutils literal">buf</tt> 前 n 個字元清空，導致在
-<tt class="docutils literal">filter_format()</tt> 中的第二個 for loop 不會有效果。因為 global <tt class="docutils literal">buf</tt> 前段早已
-被清為 0，一開始字串長度判定是 0，馬上離開 for loop。因此 global <tt class="docutils literal">buf</tt> 維持原
-樣，'%' 不會被替換為 '_'。</p>
-<p>在 <tt class="docutils literal">echo()</tt> 中，呼叫完 <tt class="docutils literal">filter_format()</tt> 後，會將 ':' 後的字串（'%' 已被替換
-成 '_'）複製到 global <tt class="docutils literal">buf</tt> 的前段，導致可能覆蓋到 global <tt class="docutils literal">buf</tt> 中  ':' 後的
-字串（'%' 未被替換為 '_'），因此若要利用 format string 來進行 exploit 的話，需要
-額外的計算以確保目標 string 不被程式破壞。</p>
-<p>根據上述所提供的範例輸入字串，在 <tt class="docutils literal">echo()</tt> 中執行 <tt class="docutils literal">printf(buf)</tt> 前 global
-<tt class="docutils literal">buf</tt> 的值會是：</p>
+<p>In <tt class="docutils literal">get_request()</tt>, the first n bytes of global variable <tt class="docutils literal">buf</tt> will be
+eliminated before return. This will make the second for loop in
+<tt class="docutils literal">filter_format()</tt> has no effect. Because the first n bytes of global variable
+<tt class="docutils literal">buf</tt> are already been cleared with zeros, the length of the string is zero.
+Thus the for loop will ended up immediately. As a result, the global <tt class="docutils literal">buf</tt>
+remains, '%' is not replaced with '_'.</p>
+<p>In function <tt class="docutils literal">echo()</tt>, after calling <tt class="docutils literal">filter_format()</tt>, the string which is
+after ':' ('%' have already been replaced with '_') will be copied to the front
+end of the global variable <tt class="docutils literal">buf</tt>. This could make the string which is after
+':' of the global variable <tt class="docutils literal">buf</tt> ('%' are not replaced with '_') being
+overlaped. So extra calculation must be taken to assure the target string not
+being messed, if someone want to exploit the program using format string.</p>
+<p>According to the example string which is entered into the program, the value in
+the global variable <tt class="docutils literal">buf</tt> before calling <tt class="docutils literal">printf(buf)</tt> in function
+<tt class="docutils literal">echo()</tt> is:</p>
 <div class="highlight"><pre>_x_x_x_x_x\nx%x%x%x%x\n
 </pre></div>
-<p>印出來的的結果會是：</p>
+<p>The result showed up is:</p>
 <div class="highlight"><pre>_x_x_x_x_x
 xfffe4f4cbf7f4b3d00
 </pre></div>
-<p>如果 ':' 後的字串長度（包含 'n'）長度剛好是 10 的話，可以蓋到 ':' 那格（':' 因
-<tt class="docutils literal">strtok</tt> 而被置換為 string terminator），如此一來字串又可以重新連成一氣，':'
-後面即是我們原本的 format string。</p>
-<p>若長度不足 10 的話，就在 ':' 與 format string 之間補字元（內容不重要），確保可以
-重新把 global <tt class="docutils literal">buf</tt> 接起來：</p>
+<p>If the length of the string after ':' (including 'n') is exactly 10, it can
+overwrite the byte which contains ':' (':' is replaced with string terminator
+because of <tt class="docutils literal">strtok</tt>). In the end, the whole string is connected again, rear
+part is our original format string.</p>
+<p>Padding some trival characters between ':' and the format string to ensure to
+connect the global variable <tt class="docutils literal">buf</tt> again, if the lenth of the string is less
+than 10.</p>
 <div class="highlight"><pre>GET /echo:aaaaaaa%p
 </pre></div>
-<p>長度大於 10 的字串，必須要在 input 最前面補上多出來的部分（內容不重要），才不會
-蓋到後面的 format string：</p>
+<p>For the string which is longer than 10, one must pad some trival characters to
+make sure the format string won't be covered by something useless by the
+fxxking program logic.</p>
 <div class="highlight"><pre>GGET /echo:%p%p%p%p%p
 </pre></div>
 </div>
 <div class="section" id="objective">
 <h2>Objective</h2>
-<p>在 <tt class="docutils literal">echo()</tt> 中它的 return address 位於 $esp+0x1c，也就是用 <tt class="docutils literal">%7$p</tt> 可以 leak
-return address（當然要補滿到 10 個字元）。我們的目標是改寫這裏的 address
-（0x0804917f）成 <tt class="docutils literal">normal_file()</tt> 的 address（0x08048c8f）。除此之外 global
-<tt class="docutils literal">file</tt> 的內容也要改成 &quot;flag&quot;，如此以來 <tt class="docutils literal">normal_file()</tt> 才能開啟 flag 並且讀
-取內容。但事情並沒有想像中的那般單純，因為 remote 端有開啟 ASLR，因此 return
-address 實際上在 stack 中的位置我們是無法得知的，就無法透過 format string 的方式
-寫值。</p>
-<p>Return address 無法修改，但其實還有別的方法可以控制 $eip，就是運用 GOT table。
-<tt class="docutils literal">fflush()</tt> 在 GOT table 中的 offset 為 0x804b018 其內容為 <tt class="docutils literal">fflush()</tt> 實際所
-在的位置（0xf7e78760）。只要將 <tt class="docutils literal">fflush()</tt> 所在位置移花接木到 <tt class="docutils literal">normal_file()</tt>
-即可。但在實測後發現 <tt class="docutils literal">normal_file()</tt> 中也有 <tt class="docutils literal">fflush()</tt> ，這將導致無窮遞迴。
-改用 <tt class="docutils literal">exit()</tt> 即可避免。 <tt class="docutils literal">exit()</tt> 在 GOT table 中的 offset 為 0x0804b03c。</p>
+<p>The return address is at <tt class="docutils literal">$esp+0x1c</tt> in <tt class="docutils literal">echo()</tt>, that is to say, using
+<tt class="docutils literal">%7$p</tt> could leak the return address (of course the length must be at least
+10 characters). Our objective is to modify the address (0x0804917f) with the
+address of function <tt class="docutils literal">normal_file()</tt> (0x08048c8f). Besides, the content of the
+global variable <tt class="docutils literal">file</tt> should be &quot;flag&quot;. With all of this, the function
+<tt class="docutils literal">normal_file()</tt> can have the ability of opening the file of the flag and
+reading that file. The gods send nut to those who have no teeth, the server
+side has already enabled ASLR, so we cannot know the location of the return
+address in the stack. Thus, exploitation using format string to overwrite the
+return address in the stack is not practical.</p>
+<p>However, there's another way to control the <tt class="docutils literal">eip</tt> though the return address
+cannot be modified. The Global Offset Table (GOT) might be a good candidate.
+The offset of the function <tt class="docutils literal">fflush()</tt> in the GOT is 0x0804b018. The content
+in that is the actual position of <tt class="docutils literal">fflush()</tt> (0xf7e78760) after GLIBC was
+dynamically loaded into the program. So we just have to replace the address
+with the address of <tt class="docutils literal">normal_file()</tt>. But again, the gods send nut to those
+who have no theeth, there is a <tt class="docutils literal">fflush()</tt> in the function <tt class="docutils literal">normal_file()</tt>.
+So doing this will cause an endless loop. A better choice is to modify the
+address of the function <tt class="docutils literal">exit()</tt> in the GOT to avoid that. The offset of the
+function <tt class="docutils literal">exit()</tt> in the GOT is 0x0804b03c.</p>
 <div class="highlight"><pre><span class="nv">$ </span>readelf -r notweb
 
 Relocation section <span class="s1">&#39;.rel.dyn&#39;</span> at offset 0x49c contains 3 entries:
@@ -157,12 +172,14 @@ Relocation section <span class="s1">&#39;.rel.plt&#39;</span> at offset 0x4b4 co
  0804b058  00001407 R_386_JUMP_SLOT   00000000   strtok
  0804b05c  00001507 R_386_JUMP_SLOT   00000000   sprintf
 </pre></div>
-<p>除了控制 $eip 以外，還有 global variable <tt class="docutils literal">file</tt> 需要將其值改寫為 &quot;flag&quot;。</p>
+<p>Besides controlling the <tt class="docutils literal">eip</tt>, the global variable <tt class="docutils literal">file</tt> should be set to
+the string &quot;flag&quot;, too.</p>
 </div>
 <div class="section" id="exploitation">
 <h2>Exploitation</h2>
-<p>關鍵在於如何同時設計好 payload 又可以完美的不被程式的 filter 給破壞掉原本的
-format string。 以下為 exploit 程式的主要片段。</p>
+<p>The key point is that how to design the payload and keep the original format
+string from destroying by the filter. The following is the main part of the
+exploitation code.</p>
 <div class="highlight"><pre><span class="c"># exit()&#39;s offset in GOT showed up in stack fram</span>
 <span class="c"># normal_file() @ 0x08048c8f</span>
 <span class="c"># total 16 bytes</span>
