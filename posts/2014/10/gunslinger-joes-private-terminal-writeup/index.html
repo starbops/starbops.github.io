@@ -55,17 +55,17 @@
 <h2>Problem Description</h2>
 <p>In the Hack.lu CTF website, there are some description about &quot;Gunslinger Joe's
 private Terminal&quot;:</p>
-<blockquote>
-<p>Gunslinger Joe's private Terminal
+<div class="highlight"><pre>Gunslinger Joe&#39;s private Terminal
 by cutz (Misc)
 50 (+20) Points
 Gunslinger Joe has a pretty bad memory and always forgets the password for his
-private terminals! That's why he always uses his username as password but also
+private terminals! That&#39;s why he always uses his username as password but also
 makes sure that absolutely no one else who knows his name can interact with his
-secure terminal. Wouldn't it be super embarrassing for him to prove him wrong?</p>
-<p>SSH: <a class="reference external" href="mailto:gunslinger_joe&#64;wildwildweb.fluxfingers.net">gunslinger_joe&#64;wildwildweb.fluxfingers.net</a>
-PORT: 1403</p>
-</blockquote>
+secure terminal. Wouldn&#39;t it be super embarrassing for him to prove him wrong?
+
+SSH: gunslinger_joe@wildwildweb.fluxfingers.net
+PORT: 1403
+</pre></div>
 <p>According to the description above, Gunslinger Joe's SSH account and password
 are both &quot;gunslinger_joe&quot;. So let's connect to the SSH server:</p>
 <div class="highlight"><pre><span class="nv">$ </span>ssh wildwildweb.fluxfingers.net -l gunslinger_joe -p 1403
@@ -115,37 +115,38 @@ executable in the <tt class="docutils literal">/bin</tt>.</p>
 <div class="highlight"><pre><span class="nv">$ </span>/*/*
 </pre></div>
 <p>Oops! WTF! It seems that the file <tt class="docutils literal">/bin/bashbug</tt> has been executed. And we
-finally got an editor, which is <tt class="docutils literal">vim</tt>.
-.. code-block:: text</p>
-<blockquote>
-<p>From: gunslinger_joe
+finally got an editor, which is <tt class="docutils literal">vim</tt>.</p>
+<div class="highlight"><pre>From: gunslinger_joe
 To: ../../bin/bunzip2
-Subject: [50 character or so descriptive subject here (for reference)]</p>
-<p>Configuration Information [Automatically generated, do not change]:
+Subject: [50 character or so descriptive subject here (for reference)]
+
+Configuration Information [Automatically generated, do not change]:
 Machine: x86_64
 OS: linux-gnu
 Compiler: gcc
-Compilation CFLAGS:  -DPROGRAM='bash' -DCONF_HOSTTYPE='x86_64' -DCONF
-OSTYPE='linux-gnu' -DCONF_MACHTYPE='x86_64-unknown-linux-gnu'
--DCONF_VENDOR='unknown' -DLOCALEDIR='//share/locale' -DPACKAGE='bash'
+Compilation CFLAGS:  -DPROGRAM=&#39;bash&#39; -DCONF_HOSTTYPE=&#39;x86_64&#39; -DCONF
+OSTYPE=&#39;linux-gnu&#39; -DCONF_MACHTYPE=&#39;x86_64-unknown-linux-gnu&#39;
+-DCONF_VENDOR=&#39;unknown&#39; -DLOCALEDIR=&#39;//share/locale&#39; -DPACKAGE=&#39;bash&#39;
 -DSHELL -DHAVE_CONFIG_H   -I.  -I. -I./include -I./lib   -g -O2
 uname output: Linux terminal 3.13.0-37-generic #64-Ubuntu SMP Mon Sep 22
 21:28:38 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux
-Machine Type: x86_64-unknown-linux-gnu</p>
-<p>Bash Version: 4.3
+Machine Type: x86_64-unknown-linux-gnu
+
+Bash Version: 4.3
 Patch Level: 30
-Release Status: release</p>
-<dl class="docutils">
-<dt>Description:</dt>
-<dd>[Detailed description of the problem, suggestion, or complaint.]</dd>
-<dt>Repeat-By:</dt>
-<dd>[Describe the sequence of events that causes the problem
-to occur.]</dd>
-<dt>Fix:</dt>
-<dd>[Description of how to fix the problem.  If you don't know a
-fix for the problem, don't include this section.]</dd>
-</dl>
-</blockquote>
+Release Status: release
+
+Description:
+        [Detailed description of the problem, suggestion, or complaint.]
+
+Repeat-By:
+        [Describe the sequence of events that causes the problem
+        to occur.]
+
+Fix:
+        [Description of how to fix the problem.  If you don&#39;t know a
+        fix for the problem, don&#39;t include this section.]
+</pre></div>
 <p>Gods be good, we all know that anyone can execute any commands in <tt class="docutils literal">vim</tt> using
 <tt class="docutils literal">:! &lt;command&gt;</tt>. So I tried <tt class="docutils literal">:! cat FLAG</tt>. But the system told me there was
 no more resources to fork another process to do the work. Where there is a
