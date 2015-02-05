@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Setting NIS & NFS on FreeBSD // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Thu 25 December 2014</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Setting NIS &amp; NFS on FreeBSD</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/freebsd/">freebsd</a>
+                                <a class="post-category" href="/tag/nis/">nis</a>
+                                <a class="post-category" href="/tag/nfs/">nfs</a>
+                                <a class="post-category" href="/tag/automount/">automount</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="requirement-architecture">
+<h2>Requirement &amp; Architecture</h2>
+<p>There will be 3 machines in the MCC environment.</p>
+<ul class="simple">
+<li>sahome (NIS master server, NFS server)</li>
+<li>saduty (NIS slave server, NFS client)</li>
+<li>sabsd (NIS client, NFS client)</li>
+</ul>
+<p>The architecture is shown below:</p>
+<div class="highlight"><pre>        sa-core
++-----------------------+
+|                       |
+|  +========+           |
+|  |        | NIS master|
+|  | sahome | NFS server|
+|  |        |           |
+|  +========+           |
+|      ^                |
+|      | SSH            |
+|      v                |
+|  +========+           |           +=======+
+|  |        | NIS slave |       +-&gt; |       | NIS client
+|  | saduty | NFS client|       |   | sabsd | NFS client
+|  |        | &lt;-----------------+   |       | &lt;-------------
+|  +========+           | SSH       +=======+   SSH
+|                       |
++-----------------------+
+</pre></div>
+<p>A bunch of requirements should be satisfied:</p>
+<ul>
+<li><dl class="first docutils">
+<dt>Full Network Information System (NIS) environment</dt>
+<dd><ul class="first last">
+<li><dl class="first docutils">
+<dt>Groups</dt>
+<dd><ul class="first last simple">
+<li>samaster (god)</li>
+<li>sysadm (can access /net/data/sata)</li>
+<li>nctucs (normal user)</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Netgroups</dt>
+<dd><ul class="first last simple">
+<li>sa-adm (admin users who can login to sa-core)</li>
+<li>sa-core (sahome and saduty)</li>
+<li>sa-bsd (all servers in MCC)</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>Full Network File System (NFS) environment</dt>
+<dd><ul class="first last simple">
+<li>Users are allowed to login servers with unfied accounts through NIS</li>
+<li>Users' home directory <tt class="docutils literal">/net/home</tt> are exported from sahome through NFS</li>
+<li>Share data <tt class="docutils literal">/net/data</tt> that are needed by other servers through NFS</li>
+<li>Sahre admin's data <tt class="docutils literal">/net/admin</tt> only to saduty</li>
+<li>Ports directory also shared through NFS</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">Using Auto Mount Daemon (AMD) to implement on-demand file system
+mounting/unmounting</p>
+</li>
+<li><p class="first">Share <tt class="docutils literal">sudoers</tt> configuration file at <tt class="docutils literal">/net/data/sudoers</tt></p>
+</li>
+<li><p class="first">Using <tt class="docutils literal">rup</tt> to monitor servers' states</p>
+</li>
+<li><p class="first">Centralized log server at sahome</p>
+</li>
+</ul>
+</div>
+<div class="section" id="network-information-system">
+<h2>Network Information System</h2>
+<p>Both NIS and NFS are based on Remote Procedure Call (RPC) services. So RPC must
+be enabled first in order to run as an NIS server or an NIS client. Also, NIS
+server and client must share an NIS domain name. This domain name is nothing to
+do with DNS. In <tt class="docutils literal">/etc/rc.conf</tt>:</p>
+<div class="highlight"><pre>## NIS &amp; NFS
+rpcbind_enable=&quot;YES&quot;
+nisdomainname=&quot;+sa.nis&quot;
+</pre></div>
+<p>To achieve NIS account login and access control, some user authentication
+configuration files should be edited in all NIS domain machines (remember the
+NIS server is also an NIS client). Otherwise users could not login to these
+machines. One is <tt class="docutils literal">/etc/master.passwd</tt>. Use <tt class="docutils literal">vipw</tt> to modify this file, it
+will modify the corresponding <tt class="docutils literal">/etc/passwd</tt> automatically. In this file,
+netgroup of NIS could be used to achieve access control. Append the following
+two lines:</p>
+<div class="highlight"><pre>+@sa-adm:::::::::
++:::::::::/usr/sbin/nologin
+</pre></div>
+<p>Also the <tt class="docutils literal">/etc/group</tt>:</p>
+<div class="highlight"><pre>+:*:0:
+</pre></div>
+<div class="section" id="nis-master-server">
+<h3>NIS Master Server</h3>
+<p>Now is time for NIS master server! The NIS is so called YP (Yello Page). Also
+the name of the NIS daemon is <tt class="docutils literal">ypserv</tt>. All NIS server should run this daemon
+to be a true NIS server regardless of master or slave. And <tt class="docutils literal">yppasswdd</tt> is
+another daemon which allows NIS clients to change their NIS passwords. But it
+should only run on NIS <strong>master</strong> server. To run these daemons on the startup,
+edit <tt class="docutils literal">/etc/rc.conf</tt>:</p>
+<div class="highlight"><pre>## NIS Master Server
+nis_server_enable=&quot;YES&quot;
+nis_yppasswdd_enable=&quot;YES&quot;
+nis_yppasswdd_flags=&quot;-v -u -d +sa.nis&quot;
+</pre></div>
+<p>Before initializing the maps, start the NIS server (<em>disputed</em>).</p>
+<div class="highlight"><pre><span class="c"># service ypserv start</span>
+</pre></div>
+<p>Place the files which should be shared in <tt class="docutils literal">/var/yp</tt>. Some of them are copied
+from <tt class="docutils literal">/etc</tt>, some are generated manually.</p>
+<div class="highlight"><pre><span class="c"># cp /etc/master.passwd /var/yp</span>
+<span class="c"># cp /etc/group /var/yp/</span>
+<span class="c"># touch /var/yp/netgroup</span>
+<span class="c"># touch /var/yp/hosts</span>
+<span class="c"># touch /var/yp/amd.map</span>
+</pre></div>
+<p>System accounts and groups should not be shared by NIS to other hosts inside
+the NIS domain. So the following two points should be done with
+<tt class="docutils literal">master.passwd</tt> and <tt class="docutils literal">group</tt>:</p>
+<ul class="simple">
+<li>Remove system accounts and groups in <tt class="docutils literal">/var/yp/master.passwd</tt> and <tt class="docutils literal">/var/yp/master.passwd</tt></li>
+<li>Remove normal users and groups in <tt class="docutils literal">/etc/master.passwd</tt> and <tt class="docutils literal">/etc/group</tt></li>
+</ul>
+<p>Comment out the line in <tt class="docutils literal">/var/yp/Makefile</tt> because there is a NIS slave
+server need to be pushed every time the NIS map is changed.</p>
+<div class="highlight"><pre>NOPUSH = &quot;True&quot;
+</pre></div>
+<p>Now it is time to generate the maps. Because this is a master server, a option
+of <tt class="docutils literal"><span class="pre">-m</span></tt> should be added into the command:</p>
+<div class="highlight"><pre><span class="c"># cd /var/yp</span>
+<span class="c"># ypinit -m +sa.nis</span>
+Server Type: MASTER Domain: +sa.nis
+
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+
+Do you want this procedure to quit on non-fatal errors? <span class="o">[</span>y/n: n<span class="o">]</span>  n
+
+Ok, please remember to go back and redo manually whatever fails.
+If you don<span class="err">&#39;</span>t, something might not work.
+
+At this point, we have to construct a list of this domains YP servers.
+zphome.zespre.com is already known as master server.
+Please <span class="k">continue </span>to add any slave servers, one per line. When you are
+<span class="k">done </span>with the list, <span class="nb">type </span>a &lt;control D&gt;.
+        master server   :  sahome.zespre.com
+        next host to add:  saduty.zespre.com
+        next host to add:  ^D
+The current list of NIS servers looks like this:
+
+sahome.zespre.com
+saduty.zespre.com
+
+Is this correct?  <span class="o">[</span>y/n: y<span class="o">]</span>  y
+
+... map generation output suppressed ...
+
+NIS Map update completed.
+
+sahome.zespre.com has been setup as an YP master server without any errors.
+</pre></div>
+<p>And now the NFS master server is up!</p>
+</div>
+<div class="section" id="nis-slave-server">
+<h3>NIS Slave Server</h3>
+<p>The configuration of NIS slave server is much simpler than the master. One
+concept to remember is that &quot;To be a slave, one must be a client first.&quot;. The
+NIS server is also an NIS client which binds to themselves. But at the very
+begining, there are no maps for the slave to host. Where is the NIS maps? The
+answer is simple, &quot;pull from master server&quot;. So be a NIS client first, get the
+maps, then be a slave, host the maps. That is the strategy. In <tt class="docutils literal">/etc/rc.conf</tt>
+the order of the <tt class="docutils literal">nis_client_flags</tt> varies depending on whom to bind to. In
+our case, saduty binds to sahome when it is a client. After the maps are
+retrieved, it binds to itself. The last one is the highest priority:</p>
+<div class="highlight"><pre>## NIS Slave Server
+nis_server_enable=&quot;YES&quot;
+
+## NIS Client
+nis_client_enable=&quot;YES&quot;
+nis_client_flags=&quot;-s -m -S +sa.nis,sahome,saduty&quot;
+</pre></div>
+<p>Use <tt class="docutils literal"><span class="pre">-s</span></tt> instead of <tt class="docutils literal"><span class="pre">-m</span></tt> in <tt class="docutils literal">ypinit</tt> command. Also specify master server
+and NIS domain in the command.</p>
+<div class="highlight"><pre><span class="c"># ypinit -s sahome +sa.nis</span>
+
+Server Type: SLAVE Domain: +sa.nis Master: zphome
+
+Creating an YP server will require that you answer a few questions.
+Questions will all be asked at the beginning of the procedure.
+
+Do you want this procedure to quit on non-fatal errors? <span class="o">[</span>y/n: n<span class="o">]</span>  n
+
+Ok, please remember to go back and redo manually whatever fails.
+If not, something might not work.
+There will be no further questions. The remainder of the procedure
+should take a few minutes, to copy the databases from zphome.
+Transferring master.passwd.byuid...
+ypxfr: Exiting: Map successfully transferred
+
+... map generation output suppressed ...
+
+zpduty has been setup as an YP slave server without any errors.
+Remember to update map ypservers on zphome.
+</pre></div>
+<p>This will generate a directory called <tt class="docutils literal">+sa.nis</tt> under <tt class="docutils literal">/var/yp</tt> which
+contains the copy of the NIS maps in master server. Now the slave is ready to
+serve.</p>
+</div>
+<div class="section" id="nis-client">
+<h3>NIS Client</h3>
+<p>Now is time for the client. We make the client bind to the slave server,
+saduty, by editing <tt class="docutils literal">/etc/rc.conf</tt>.</p>
+<div class="highlight"><pre>## NIS Client
+nis_client_enable=&quot;YES&quot;
+nis_client_flags=&quot;-s -m -S +sa.nis,sahome,saduty&quot;
+</pre></div>
+<p>Make sure name service switch configuration file <tt class="docutils literal">/etc/nsswitch.conf</tt> is set
+properly. Some system configuration files need to be search through NIS, e.g.
+hosts.</p>
+<div class="highlight"><pre>#
+# nsswitch.conf(5) - name service switch configuration file
+# $FreeBSD: releng/10.1/etc/nsswitch.conf 224765 2011-08-10 20:52:02Z dougb $
+#
+group: compat
+group_compat: nis
+hosts: files dns nis
+networks: files
+passwd: compat
+passwd_compat: nis
+shells: files
+services: compat
+services_compat: nis
+protocols: files
+rpc: files
+</pre></div>
+</div>
+<div class="section" id="if-you-want-to-add-a-new-user">
+<h3>If You Want to Add A New User</h3>
+<p>First of all, the administrator must be in NIS master server, e.g. sahome. Here
+I use <tt class="docutils literal">pw</tt> to do the work, while it is not that perfect.</p>
+<div class="highlight"><pre><span class="c"># pw useradd newuser -V /var/yp -b /net/home -h 0 -Y</span>
+</pre></div>
+<p>If the option <tt class="docutils literal"><span class="pre">-h</span> 0</tt> is used, the system will ask you for new user's
+password. It is an interface of <tt class="docutils literal">pw</tt>. Other program could communicate with
+it.</p>
+<p>Other options could be added if you want. But actually, after testing several
+rounds, I found that it is impossible to create the home directory for the new
+user if <tt class="docutils literal"><span class="pre">-V</span> etcdir</tt> option is specified. One possible reason is that it might
+be a security concern. Writing a wrapper script that created the account and
+then built the home directory is a solution that come to my mind... However,
+there is a workaround:</p>
+<div class="highlight"><pre><span class="c"># pw usermod newuser -m</span>
+</pre></div>
+<p>Create the home directory of the new user by <tt class="docutils literal">pw usermod</tt>.</p>
+</div>
+</div>
+<div class="section" id="network-file-system">
+<h2>Network File System</h2>
+<p>Some applications require file locking to operate correctly. To enable locking,
+add the following two lines in <tt class="docutils literal">/etc/rc.conf</tt>:</p>
+<div class="highlight"><pre>## Locking
+rpc_lockd_enable=&quot;YES&quot;
+rpc_statd_enable=&quot;YES&quot;
+</pre></div>
+<div class="section" id="nfs-server">
+<h3>NFS Server</h3>
+<p>As an NFS server, one must export something to the others. This is done by
+<tt class="docutils literal">mountd</tt>. And <tt class="docutils literal">nfsd</tt> is responsible for handling requests from NFS clients.</p>
+<p><tt class="docutils literal">/etc/rc.conf</tt></p>
+<div class="highlight"><pre>## NFS Server
+nfs_server_enable=&quot;YES&quot;
+nfs_server_flags=&quot;-u -t -n 10&quot;
+mountd_flags=&quot;-r&quot;
+nfs_reserved_port_only=&quot;YES&quot;
+</pre></div>
+<p>We share four directories through NFS Each has its own attributes and
+permissions:</p>
+<ul class="simple">
+<li><tt class="docutils literal">/net/data</tt></li>
+<li><tt class="docutils literal">/net/home</tt></li>
+<li><tt class="docutils literal">/net/admin</tt></li>
+<li><tt class="docutils literal">/usr/ports</tt></li>
+</ul>
+<p>Settings should be placed in <tt class="docutils literal">/etc/exports</tt>:</p>
+<div class="highlight"><pre>#################################
+#       Read-only exports
+#################################
+#
+/net/data -ro -maproot=nobody sa-bsd
+/usr/ports -ro -maproot=root sa-bsd
+#
+##########################################################
+#       Read-write exports
+#       XXX: All writable export *MUST* be specify host
+##########################################################
+#
+/net/home -maproot=nobody sa-bsd
+/net/admin -maproot=root sa-core
+</pre></div>
+<p>Once the exports file is modified, the <tt class="docutils literal">mountd</tt> should be reloaded. The
+<tt class="docutils literal">mountd</tt> utility can be made to reload the exports file by:</p>
+<div class="highlight"><pre><span class="c"># service mountd onereload</span>
+</pre></div>
+<p>Prepending &quot;one&quot; on &quot;reload&quot; is because of that we did not specify
+<tt class="docutils literal"><span class="pre">mountd_enable=&quot;YES&quot;</span></tt> in <tt class="docutils literal">/etc/rc.conf</tt>.</p>
+</div>
+<div class="section" id="nullfs">
+<h3>NullFS</h3>
+<p>NFS has one minor restriction, but actually it is important in our situation
+though. The manpage of NFS says that it could not share one file system twice
+or even more. Since my sharing directory is <tt class="docutils literal">/net</tt>, and I only mount one file
+system on it, I cannot meet the requirement (share <tt class="docutils literal">/net/data</tt>,
+<tt class="docutils literal">/net/home/</tt>, <tt class="docutils literal">/net/admin</tt>, etc.). There are two solutions come to my mind:</p>
+<ol class="arabic simple">
+<li>Each sharing directory will have a file system (naive)</li>
+<li>Using nullfs</li>
+</ol>
+<p>If you just restart the NFS server, some horrible things will happen.</p>
+</div>
+<div class="section" id="nfs-client">
+<h3>NFS Client</h3>
+<p>Enabling NFS client at boot time, <tt class="docutils literal">/etc/rc.conf</tt>:</p>
+<div class="highlight"><pre>## NFS Client
+nfs_client_enable=&quot;YES&quot;
+nfs_client_flags=&quot;-n 10&quot;
+</pre></div>
+</div>
+</div>
+<div class="section" id="auto-mount-daemon">
+<h2>Auto Mount Daemon</h2>
+<p>Edit <tt class="docutils literal">/etc/rc.conf</tt> and set some flags for amd.</p>
+<div class="highlight"><pre>## AMD
+amd_enable=&quot;YES&quot;
+amd_flags=&quot;-a /amd -c 1800 -y +sa.nis -l syslog -x all /net amd.map&quot;
+</pre></div>
+<ul class="simple">
+<li><tt class="docutils literal"><span class="pre">-a</span> /amd</tt>: Alternative location for the real mount point, default is
+<tt class="docutils literal">/.amd_mnt</tt></li>
+<li><tt class="docutils literal"><span class="pre">-c</span> 1800</tt>: A duration in seconds</li>
+<li><tt class="docutils literal"><span class="pre">-y</span> +sa.nis</tt>: Specified an alternative NIS domain for fetching the
+<tt class="docutils literal">amd.map</tt> file</li>
+<li><tt class="docutils literal"><span class="pre">-l</span> syslog</tt>: Mount and unmount events will be recorded and sent to the log
+daemon by syslog</li>
+<li><tt class="docutils literal"><span class="pre">-x</span> all</tt>: Runtime loggin options</li>
+</ul>
+<p>The monitored directory is <tt class="docutils literal">/net</tt>, symbolic links will be constructed here to
+the real mount point under <tt class="docutils literal">/amd</tt>.</p>
+<p><tt class="docutils literal">/var/yp/amd.map</tt></p>
+<p>The first line begins with <tt class="docutils literal">/defaults</tt>, which sets default parameters for all
+entries below. The second line and others begin with the &quot;keys&quot;. One can use
+wildcard &quot;*&quot; for key auto translation. Each entry specifies remote host, remote
+file system, and some options. A bunch of parameters could be used. When trying
+to access the &quot;key&quot; directory under the monitored directory, say <tt class="docutils literal">/net</tt>, auto
+mount daemon will mount the desired file system to the real mount point which
+specified by <tt class="docutils literal"><span class="pre">-a</span></tt> option in amd flags.</p>
+<div class="highlight"><pre>/defaults type:=nfsl;fs:=${autodir}/${key};opts:=grpid,intr,lockd,nodev,nosuid,quota,resvport,retrans=5,hard,timeo=10,rw,noac,acregmin=0,acregmax=0,acdirmin=0,acdirmax=0
+home            -rfs:=/net/home;rhost:=sahome host==${rhost};fs:=${rfs} host!=${rhost}
+data            -rfs:=/net/data;rhost:=sahome;addopts:=ro,noexec host==${rhost};fs:=${rfs} host!=${rhost}
+admin           -rfs:=/net/admin;rhost:=sahome;addopts:=ro host==${rhost};fs:=${rfs} host!=${rhost}
+ports           -rfs:=/usr/ports;rhost:=sahome;addopts:=ro,noexec host==${rhost};fs:=${rfs} host!=${rhost}
+</pre></div>
+<p>One important thing to do is that because <tt class="docutils literal">/usr/ports</tt> are shared by sahome
+with &quot;read-only&quot; permission, other machine that mount this share will not able
+to compile ports right under the directory. To solve this, <tt class="docutils literal">/etc/make.conf</tt>
+should be modified:</p>
+<div class="highlight"><pre>DISTDIR=        /tmp/distfiles
+WRKDIRPREFIX=   /tmp/WRKDIR
+</pre></div>
+</div>
+<div class="section" id="sudo">
+<h2>Sudo</h2>
+<p>We will create a shared <tt class="docutils literal">sudoers</tt> file right in <tt class="docutils literal">/net/data</tt>. Simple
+permissions are defined in here:</p>
+<ul class="simple">
+<li>Users of group samaster can issue any commands at any hosts as any users</li>
+<li>Users of group sysadm can issue a specific set of commands at any hosts as
+any users</li>
+<li>Users of group nctucs are not sudoers</li>
+</ul>
+<div class="highlight"><pre>##
+## Cmnd alias specification
+##
+Cmnd_Alias SHELLS=/bin/sh,/bin/tcsh,/bin/csh,/usr/local/bin/tcsh,\
+                  /usr/local/bin/ksh,/usr/local/bin/bash,\
+                  /usr/bin/sh,/usr/bin/tcsh,/usr/bin/csh,/usr/bin/bash,/bin/zsh,\
+                  /usr/local/bin/zsh
+Cmnd_Alias SYSADM=/bin/ls,/bin/cat,/usr/bin/top,/usr/bin/renice,/bin/kill,\
+                  /sbin/reboot,/sbin/shutdown,\
+                  sudoedit
+
+##
+## User privilege specification
+##
+%samaster ALL=(ALL) ALL,!SHELLS
+%sysadm ALL=SYSADM,!SHELLS
+</pre></div>
+<p>In original <tt class="docutils literal">/usr/local/etc/sudoers</tt> file, append this line to include other
+sudoers configuration files:</p>
+<div class="highlight"><pre>#include /net/data/sudoers
+</pre></div>
+</div>
+<div class="section" id="rup">
+<h2>RUP</h2>
+<p>Uncomment this line in <tt class="docutils literal">/etc/inetd.conf</tt> to enable <tt class="docutils literal">rpc.rstatd</tt> through
+<tt class="docutils literal">inetd</tt>.</p>
+<div class="highlight"><pre>rstatd/1-3      dgram rpc/udp wait root /usr/libexec/rpc.rstatd  rpc.rstatd
+</pre></div>
+<p>The <tt class="docutils literal">rpc.rstatd</tt> utility is a server which returns performance statistics
+obtained from the kernel.</p>
+</div>
+<div class="section" id="log-server">
+<h2>Log Server</h2>
+<p>There are three machines in the MCC. Lots of logs will be generated. To
+centralize the management of machines through logs, one should centralize the
+logs storage, too. In the MCC, all the logs that generated by specific machines
+are transfer to the loghost</p>
+<p>Logs have priorities (levels). The following lines are coming from the manpage
+of syslog(3):</p>
+<ol class="arabic simple">
+<li>LOG_EMERG: A panic condition. This is normally broadcast to all users.</li>
+<li>LOG_ALERT: A condition that should be corrected immediately, such as a
+corrupted system database.</li>
+<li>LOG_CRIT: Critical conditions, e.g., hard device error.</li>
+<li>LOG_ERR: Errors.</li>
+<li>LOG_WARNING: Warning messages.</li>
+<li>LOG_NOTICE: Conditions that are not error conditions, but should possibly be
+handled specially.</li>
+<li>LOG_INFO: Informational messages.</li>
+<li>LOG_DEBUG: Messages that contain information normally of use only when
+debugging a program.</li>
+</ol>
+<p><tt class="docutils literal">/etc/rc.conf</tt></p>
+<div class="highlight"><pre>syslogd_flags=&quot;-C -a saduty -a sabsd&quot;
+</pre></div>
+<p><tt class="docutils literal">/etc/syslog.conf</tt></p>
+<div class="highlight"><pre>*.*                                             @loghost
+</pre></div>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="https://www.freebsd.org/doc/handbook/network-nis.html">Network Information System (NIS)</a></li>
+<li><a class="reference external" href="http://lists.freebsd.org/pipermail/freebsd-questions/2003-August/016200.html">adding NIS users and create homedir</a></li>
+<li><a class="reference external" href="http://lists.freebsd.org/pipermail/freebsd-questions/2003-July/011018.html">Using pw adduser to set password in a script</a></li>
+<li><a class="reference external" href="https://www.freebsd.org/doc/handbook/network-nfs.html">Network File System (NFS)</a></li>
+<li><a class="reference external" href="http://www.weithenn.org/2009/07/nis.html">架設 NIS 驗證伺服器</a></li>
+<li><a class="reference external" href="http://markmail.org/message/qlphkdn6pvthb6ao#query:+page:1+mid:qlphkdn6pvthb6ao+state:results">Re: NIS-master/slave w/ 2.1.7+2.2.2</a></li>
+<li><a class="reference external" href="http://lists.freebsd.org/pipermail/freebsd-bugs/2010-April/039579.html">misc/145910: Problem with nullfs in fstab on boot</a></li>
+<li><a class="reference external" href="http://troysunix.blogspot.tw/2011/03/configuring-nfs-in-freebsd.html">Configuring NFS in FreeBSD</a></li>
+<li><a class="reference external" href="http://troysunix.blogspot.tw/2012/10/configuring-autofs-in-freebsd.html">Configuring AutoFS in FreeBSD</a></li>
+<li><a class="reference external" href="http://www.garron.me/en/linux/visudo-command-sudoers-file-sudo-default-editor.html">Take Control of your Linux | sudoers file: How to with Examples</a></li>
+<li><a class="reference external" href="http://www.freebsdwiki.net/index.php/Syslog">Syslog - FreeBSDwiki</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
