@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Make Your Raspberry Pi a Wireless Access Point // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Mon 14 September 2015</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Make Your Raspberry Pi a Wireless Access Point</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/raspberrypi/">raspberrypi</a>
+                                <a class="post-category" href="/tag/nat/">nat</a>
+                                <a class="post-category" href="/tag/iptables/">iptables</a>
+                                <a class="post-category" href="/tag/hostapd/">hostapd</a>
+                                <a class="post-category" href="/tag/dnsmasq/">dnsmasq</a>
+                        </p>
+                </header>
+            </section>
+            <div class="section" id="prerequisites">
+<h2>Prerequisites</h2>
+<p>This tutorial is based on two hardware which are listed below:</p>
+<ul class="simple">
+<li>Raspberry Pi model B</li>
+<li>Edimax EW-7811Un Wi-Fi nano USB adapter</li>
+</ul>
+<p>First you need to make sure the Raspberry Pi is running Raspbian. If not,
+download the zip file from the official website and unzip it:</p>
+<div class="highlight"><pre><span class="nv">$ </span>unzip 2015-05-05-raspbian-wheezy.zip
+</pre></div>
+<p>Insert the SD card which will be inserted into the Raspberry Pi into your
+computer. Here, I use Macbook Air as example. Locate the SD card:</p>
+<div class="highlight"><pre><span class="nv">$ </span>diskutil list
+</pre></div>
+<p>In my case, <tt class="docutils literal">/dev/disk2</tt> is the SD card. Then try to unmount the SD card
+(whole disk, not specific partition) and write the image which we just
+downloaded and unzipped into it:</p>
+<div class="highlight"><pre><span class="nv">$ </span>diskutil unmountDisk /dev/disk2
+<span class="c"># dd if=2015-05-05-raspbian-wheezy.img of=/dev/rdisk2 bs=1m</span>
+</pre></div>
+<p>Now the SD card is ready. Insert the card into the Raspberry Pi. Make sure the
+Ethernet cable and Wi-Fi USB adapter is connected, too. It's time to turn on
+the power of the Pi!</p>
+</div>
+<div class="section" id="configuring-network">
+<h2>Configuring Network</h2>
+<p>There are two network interfaces need to be configured:</p>
+<ul class="simple">
+<li>eth0</li>
+<li>wlan0</li>
+</ul>
+<p>The wired one, i.e. eth0, is already configured, so we only need to setup
+wlan0. This interface is acted as a default gateway of our wireless devices
+that will connect with later. The configuration file is
+<tt class="docutils literal">/etc/network/interfaces</tt>:</p>
+<div class="highlight"><pre>iface wlan0 inet static
+address 10.0.0.1
+network 10.0.0.0
+netmask 255.255.255.0
+broadcast 10.0.0.255
+</pre></div>
+<p>To prevent the network interface settings being overwritten by DHCP server, we
+need to wake up the interface manually by inserting one line in
+<tt class="docutils literal">/etc/rc.local</tt>:</p>
+<div class="highlight"><pre>...
+ifup wlan0
+...
+<span class="nb">exit </span>0
+</pre></div>
+<p>Also, the Raspberry Pi is a router in our scenario. It must have the ability to
+forward packets, i.e. receive the packets which are not destined to itself and
+lookup the routing table then forward them. Add this line in
+<tt class="docutils literal">/etc/sysctl.conf</tt> to enable this when every time the Pi boots up:</p>
+<div class="highlight"><pre>net.ipv4.ip_forward=1
+</pre></div>
+<p>Now we make the Pi receive the packets, the next important thing is NAT. The
+NAT function is done by iptables:</p>
+<div class="highlight"><pre><span class="c"># iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE</span>
+<span class="c"># iptables -A FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT</span>
+<span class="c"># iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT</span>
+</pre></div>
+<p>To enable NAT function when the Pi boots up every time, the rules of iptables
+need to be dumped to an file for later use:</p>
+<div class="highlight"><pre><span class="c"># iptables-save &gt; /etc/iptables.rules</span>
+</pre></div>
+<p>Let iptables read the rules from the file we created above before the network
+interface starts up. Write a simple shell scirpt in
+<tt class="docutils literal"><span class="pre">/etc/network/if-pre-up.d/iptables</span></tt>:</p>
+<div class="highlight"><pre><span class="c">#!/bin/sh</span>
+/sbin/iptables-restore &lt; /etc/iptables.rules <span class="o">&amp;&amp;</span> <span class="nb">exit </span>0
+</pre></div>
+<p>And finally set the execution bit up for the script:</p>
+<div class="highlight"><pre><span class="c"># chmod a+x /etc/network/if-pre-up.d/iptables</span>
+</pre></div>
+</div>
+<div class="section" id="hostapd">
+<h2>HostAPD</h2>
+<p>HostAPD is a user space daemon for access point and authentication servers.
+Install it from <cite>apt-get</cite>:</p>
+<div class="highlight"><pre><span class="c"># apt-get install hostapd</span>
+</pre></div>
+<p>But the apt hosted HostAPD is a little buggy. It is not compatible with the
+RTL8188CUS chipset. Luckily, thanks to the Edimax team, they provide a patched
+version of it on the Internet. Download the patched HostAPD <a class="reference external" href="http://www.realtek.com.tw/downloads/downloadsView.aspx?Langid=1&amp;PNid=21&amp;PFid=48&amp;Level=5&amp;Conn=4&amp;DownTypeID=3&amp;GetDown=false">here</a>.</p>
+<div class="highlight"><pre><span class="nv">$ </span>unzip 0001-RTL8188C_8192C_USB_linux_v4.0.2_9000.20130911.zip
+<span class="nv">$ </span><span class="nb">cd </span>RTL8188C_8192C_USB_linux_v4.0.2_9000.20130911/wpa_supplicant_hostapd/
+<span class="nv">$ </span>tar -zxvf wpa_supplicant_hostapd-0.8_rtw_r7475.20130812.tar.gz
+<span class="nv">$ </span><span class="nb">cd </span>wpa_supplicant_hostapd-0.8_rtw_r7475.20130812/hostapd/
+<span class="nv">$ </span>make
+<span class="c"># make install</span>
+</pre></div>
+<p>Replace the <tt class="docutils literal">hostapd</tt> binary with the newly compiled one:</p>
+<div class="highlight"><pre><span class="c"># mv /usr/sbin/hostapd /usr/sbin/hostapd.bak</span>
+<span class="c"># cp /usr/local/bin/hostapd /usr/sbin/hostapd.edimax</span>
+<span class="c"># ln -s /usr/sbin/hostapd.edimax /usr/sbin/hostapd</span>
+</pre></div>
+<p>Configure the HostAPD by editing <tt class="docutils literal">/etc/hostapd/hostapd.conf</tt>. Remember to
+replace the &quot;ssid&quot; and &quot;wpa_passphrase&quot; for your own needs:</p>
+<div class="highlight"><pre>interface=wlan0
+driver=rtl871xdrv
+ssid=my_wife
+hw_mode=g
+channel=6
+macaddr_acl=0
+auth_algs=1
+ignore_broadcast_ssid=0
+wpa=2
+wpa_passphrase=00000000000000
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=TKIP
+rsn_pairwise=CCMP
+</pre></div>
+<p>To make the HostAPD start at system boot, edit <tt class="docutils literal">/etc/default/hostapd</tt>:</p>
+<div class="highlight"><pre>DAEMON_CONF=&quot;/etc/hostapd/hostapd.conf&quot;
+</pre></div>
+</div>
+<div class="section" id="dnsmasq">
+<h2>Dnsmasq</h2>
+<p>Last part of the tutorial. The wireless devices will need IP addresses to be
+able to access the network. Then DHCP server comes!</p>
+<div class="highlight"><pre><span class="c"># apt-get install dnsmasq</span>
+</pre></div>
+<p>The DHCP server will start up when it is installed. You need to stop it to edit
+the configuration file:</p>
+<div class="highlight"><pre><span class="c"># service dnsmasq stop</span>
+<span class="c"># mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig</span>
+<span class="c"># touch /etc/dnsmasq.conf</span>
+</pre></div>
+<p>Basic configuration:</p>
+<div class="highlight"><pre>interface=wlan0
+expand-hosts
+domain=local
+dhcp-range=10.0.0.10,10.0.0.20,24h
+dhcp-option=3,10.0.0.1
+</pre></div>
+<p>Annnnnnnnnnnnnnnnd we are all set! Try to start the DHCP server or reboot the
+Raspberry Pi.</p>
+</div>
+<div class="section" id="references">
+<h2>References</h2>
+<ul class="simple">
+<li><a class="reference external" href="http://www.daveconroy.com/turn-your-raspberry-pi-into-a-wifi-hotspot-with-edimax-nano-usb-ew-7811un-rtl8188cus-chipset/">Turn Your Raspberry Pi Into a WiFi Hotspot with Edimax Nano USB EW-7811Un
+(RTL8188CUS chipset)</a></li>
+<li><a class="reference external" href="http://www.daveconroy.com/using-your-raspberry-pi-as-a-wireless-router-and-web-server/">Using you Raspberry Pi as a Wireless Router and Web Server</a></li>
+<li><a class="reference external" href="http://elinux.org/RPI-Wireless-Hotspot">RPI-Wireless-Hotspot</a></li>
+<li><a class="reference external" href="https://ariandy1.wordpress.com/2013/04/07/setting-up-wifi-access-point-with-edimax-ew-7811un-on-raspberry-pi/">Setting Up WiFi Access Point with Edimax EW-7811UN on Raspberry Pi</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
