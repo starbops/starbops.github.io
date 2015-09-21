@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Zespre's Blog, Sometimes, we generate bugs">
+
+
+        <title>Adding Virtual Disks From XenServer CLI // Zespre's Blog // Sometimes, we generate bugs</title>
+
+
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/pure/0.3.0/pure-min.css">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/4.1.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/theme/css/pure.css">
+    <link rel="stylesheet" href="/theme/css/pygments.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/fitvids/1.0.1/jquery.fitvids.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $(".content").fitVids();
+        });
+    </script>
+</head>
+
+<body>
+<div class="pure-g-r" id="layout">
+    <div class="sidebar sidebar-article pure-u">
+        <header class="header-article">
+            <hgroup>
+                <a href="/author/zespre-schmidt.html" title="See posts by Zespre Schmidt">
+                        <img class="avatar" alt="Zespre Schmidt" src="http://www.gravatar.com/avatar/93724215aa2d5a9f23d47bda8208073b">
+                </a>
+                <h2 class="article-info">Zespre Schmidt</h2>
+                <small class="about-author">Bug generator</small>
+                <h5>Published</h5>
+                <p>Sun 01 February 2015</p>
+                <a href="/">&larr;Home</a>
+            </hgroup>
+        </header>
+    </div>
+    <div class="pure-u">
+        <div class="content">
+            <section class="post">
+                <header class="post-header">
+                    <h1>Adding Virtual Disks From XenServer CLI</h1>
+                        <p class="post-meta">
+                            // under                                 <a class="post-category" href="/tag/xenserver/">xenserver</a>
+                        </p>
+                </header>
+            </section>
+            <p>I don't know where and when I set this, but XenCenter keeps telling me that I
+cannot add more virtual disks (currently only 3 virtual disks) to my virtual
+machine.</p>
+<div class="highlight"><pre>You have reached the maximum number of virtual disks allowed for this
+virtual machine.
+</pre></div>
+<p>But I can create a virtual disk and attach it to the virtual machine via XE
+command line. First, get the UUID of the local storage repository:</p>
+<div class="highlight"><pre><span class="o">[</span>root@zenserv ~<span class="o">]</span><span class="c"># xe sr-list name-label=&quot;Local storage&quot;</span>
+uuid <span class="o">(</span> RO<span class="o">)</span>                : 20f9d73a-f1e5-be80-2fcc-a9863d4112ac
+          name-label <span class="o">(</span> RW<span class="o">)</span>: Local storage
+    name-description <span class="o">(</span> RW<span class="o">)</span>:
+                host <span class="o">(</span> RO<span class="o">)</span>: zenserv
+                <span class="nb">type</span> <span class="o">(</span> RO<span class="o">)</span>: lvm
+        content-type <span class="o">(</span> RO<span class="o">)</span>: user
+</pre></div>
+<p>Then get the UUID of the virtual machine to which the new virtual disk will
+attach:</p>
+<div class="highlight"><pre><span class="o">[</span>root@zenserv ~<span class="o">]</span><span class="c"># xe vm-list name-label=zphome</span>
+uuid <span class="o">(</span> RO<span class="o">)</span>           : ba73ef4f-ad8a-91c9-a9d8-ebea92f5081f
+     name-label <span class="o">(</span> RW<span class="o">)</span>: zphome
+    power-state <span class="o">(</span> RO<span class="o">)</span>: halted
+</pre></div>
+<p>Having the UUID of the storage repository, we then create the virtual disk
+(VDI). The only one line return string is the UUID of the newly created virtual
+disk. Copy it because it will be used in the following steps.</p>
+<div class="highlight"><pre><span class="o">[</span>root@zenserv ~<span class="o">]</span><span class="c"># xe vdi-create \</span>
+&gt; sr-uuid<span class="o">=</span>20f9d73a-f1e5-be80-2fcc-a9863d4112ac <span class="se">\</span>
+&gt; name-label<span class="o">=</span>zphome_disk3 <span class="se">\</span>
+&gt; <span class="nb">type</span><span class="o">=</span>user virtual-size<span class="o">=</span>107374182400
+a65be954-b7a4-44ec-9603-4c2275e1d1f8
+</pre></div>
+<p>Create virtual block device (VBD) that connects the VDI to the VM:</p>
+<div class="highlight"><pre><span class="o">[</span>root@zenserv ~<span class="o">]</span><span class="c"># xe vbd-create \</span>
+&gt; vm-uuid<span class="o">=</span>ba73ef4f-ad8a-91c9-a9d8-ebea92f5081f <span class="nv">device</span><span class="o">=</span>3
+&gt; vdi-uuid<span class="o">=</span>a65be954-b7a4-44ec-9603-4c2275e1d1f8 <span class="se">\</span>
+&gt; <span class="nv">bootable</span><span class="o">=</span><span class="nb">false </span><span class="nv">mode</span><span class="o">=</span>RW <span class="nb">type</span><span class="o">=</span>Disk
+ce5f0688-ff5f-fb1b-0196-7cd836b639d9
+</pre></div>
+<p>Activate the VBD:</p>
+<div class="highlight"><pre><span class="o">[</span>root@zenserv ~<span class="o">]</span><span class="c"># xe vbd-plug uuid=ce5f0688-ff5f-fb1b-0196-7cd836b639d9</span>
+You attempted an operation on a VM that was not in an appropriate power
+state at the <span class="nb">time</span>; <span class="k">for </span>example, you attempted to start a VM that was
+already running.  The parameters returned are the VM<span class="err">&#39;</span>s handle, and the
+expected and actual VM state at the <span class="nb">time </span>of the call.
+vm: ba73ef4f-ad8a-91c9-a9d8-ebea92f5081f <span class="o">(</span>zphome<span class="o">)</span>
+expected: running
+actual: halted
+</pre></div>
+<p>Check the VBD:</p>
+<div class="highlight"><pre><span class="o">[</span>root@zenserv ~<span class="o">]</span><span class="c"># xe vbd-list vm-name-label=zphome</span>
+...output suppressed...
+
+uuid <span class="o">(</span> RO<span class="o">)</span>             : ce5f0688-ff5f-fb1b-0196-7cd836b639d9
+          vm-uuid <span class="o">(</span> RO<span class="o">)</span>: ba73ef4f-ad8a-91c9-a9d8-ebea92f5081f
+    vm-name-label <span class="o">(</span> RO<span class="o">)</span>: zphome
+         vdi-uuid <span class="o">(</span> RO<span class="o">)</span>: a65be954-b7a4-44ec-9603-4c2275e1d1f8
+            empty <span class="o">(</span> RO<span class="o">)</span>: <span class="nb">false</span>
+<span class="nb">           </span>device <span class="o">(</span> RO<span class="o">)</span>:
+</pre></div>
+<p>Now you should be able to see the fourth virtual disk listed on the &quot;Storage&quot;
+page of the virtual machine in XenCenter.</p>
+<div class="section" id="reference">
+<h2>Reference</h2>
+<ul class="simple">
+<li><a class="reference external" href="https://techhelplist.com/index.php/tech-tutorials/41-misc/316-xenserver-create-and-attach-virtual-disk-from-xe-cli">XenServer - Create and Attach Virtual Disk from XE CLI</a></li>
+</ul>
+</div>
+
+            <div class="hr"></div>
+            <a href="#" class="go-top">Go Top</a>
+<div class="comments">
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+        var disqus_shortname = "zespre"; // required: replace example with your forum shortname
+
+        /* * * DON'T EDIT BELOW THIS LINE * * */
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+</div><footer class="footer">
+    <p>&copy; Zespre's Blog &ndash;
+        Built with <a href="https://github.com/PurePelicanTheme/pure">Pure Theme</a>
+        for <a href="http://blog.getpelican.com/">Pelican</a>
+    </p>
+</footer>        </div>
+    </div>
+</div>
+    <script>
+        var $top = $('.go-top');
+
+        // Show or hide the sticky footer button
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                $top.fadeIn(200);
+            } else {
+                $top.fadeOut(200);
+            }
+        });
+
+        // Animate the scroll to top
+        $top.click(function(event) {
+            event.preventDefault();
+            $('html, body').animate({scrollTop: 0}, 300);
+        })
+
+        // Makes sure that the href="#" attached to the <a> elements
+        // don't scroll you back up the page.
+        $('body').on('click', 'a[href="#"]', function(event) {
+            event.preventDefault();
+        });
+    </script>
+    <script type="text/javascript">
+        var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+        document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+        try {
+            var pageTracker = _gat._getTracker("UA-56544554-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+    </script>
+</body>
+</html>
